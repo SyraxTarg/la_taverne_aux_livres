@@ -1,7 +1,8 @@
 ---
 // src/pages/books/[id].astro
-import TavernLayout from '../../layouts/TavernLayout.astro';
+import Layout from '../../layouts/Layout.astro';
 import Comments from '../../components/Comments.astro';
+import Rating from '../../components/Rating.astro';
 import { booksList, type Book } from '../../data/books';
 
 export async function getStaticPaths() {
@@ -18,7 +19,7 @@ interface Props {
 const { book } = Astro.props;
 ---
 
-<TavernLayout pageTitle={`${book.title} — ${book.author}`}>
+<Layout pageTitle={`${book.title} — ${book.author}`}>
   <article class="book-card-detail">
     <a href="/" class="back-btn">← Retour à la liste</a>
 
@@ -38,9 +39,10 @@ const { book } = Astro.props;
             <strong>{book.year}</strong>
           </div>
           <div class="meta-row">
-            <span>Note</span>
+            <span>Note globale</span>
             <strong>{book.rating} / 5</strong>
           </div>
+          <Rating bookId={book.id} />
         </div>
       </aside>
 
@@ -70,7 +72,7 @@ const { book } = Astro.props;
 
     <Comments bookId={book.id} />
   </article>
-</TavernLayout>
+</Layout>
 
 <style>
   .book-card-detail {

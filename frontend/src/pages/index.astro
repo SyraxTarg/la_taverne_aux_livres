@@ -1,11 +1,11 @@
 ---
 // src/pages/index.astro
-import TavernLayout from '../layouts/TavernLayout.astro';
+import Layout from '../layouts/Layout.astro';
 import BookCard from '../components/BookCard.astro';
 import { booksList } from '../data/books';
 ---
 
-<TavernLayout pageTitle="Bibliothèque">
+<Layout pageTitle="Bibliothèque">
   <section class="intro">
     <h1>La Taverne aux Livres</h1>
     <p>Sélection de livres lus, avis personnels et recommandations.</p>
@@ -20,7 +20,7 @@ import { booksList } from '../data/books';
       <BookCard {book} />
     ))}
   </section>
-</TavernLayout>
+</Layout>
 
 <style>
   .intro {
