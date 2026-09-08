@@ -1,0 +1,45 @@
+{
+    "title": "Le Seigneur des anneaux (Tome 2) - Les Deux Tours",
+    "authors": [
+        "John Ronald Reuel Tolkien"
+    ],
+    "publisher": "Christian Bourgois éditeur",
+    "publishedDate": "2015-10-21",
+    "description": "Les Deux Tours, deuxième partie du Seigneur des Anneaux, poursuit le récit des aventures de Frodo et de ses compagnons, lancés dans leur périple en Terre du Milieu. Avec Merry et Pippin, le lecteur plonge dans les batailles entre les Orques et les Cavaliers du Rohan, avant de rencontrer l’Ent Fangorn ; avec Aragorn, Gimli et Legolas, il assiste incrédule au retour de Gandalf ; avec Frodo et Sam, il suit Gollum le long des chemins périlleux qui mènent vers le royaume du Mordor, le seul lieu où l’Anneau pourrait être détruit. Cette nouvelle traduction prend en compte la dernière version du texte anglais, les indications laissées par J.R.R. Tolkien à l’intention des traducteurs et les découvertes permises par les publications posthumes proposées par Christopher Tolkien. Ce volume contient 16 illustrations d’Alan Lee, entièrement renumérisées, d’une qualité inégalée, ainsi qu’une carte en couleur de la Terre du Milieu.",
+    "industryIdentifiers": [
+        {
+            "type": "ISBN_13",
+            "identifier": "9782267028928"
+        },
+        {
+            "type": "ISBN_10",
+            "identifier": "2267028921"
+        }
+    ],
+    "readingModes": {
+        "text": true,
+        "image": true
+    },
+    "pageCount": 424,
+    "printType": "BOOK",
+    "categories": [
+        "Fiction"
+    ],
+    "averageRating": 5,
+    "ratingsCount": 1,
+    "maturityRating": "NOT_MATURE",
+    "allowAnonLogging": true,
+    "contentVersion": "1.16.14.0.preview.3",
+    "panelizationSummary": {
+        "containsEpubBubbles": false,
+        "containsImageBubbles": false
+    },
+    "imageLinks": {
+        "smallThumbnail": "http://books.google.com/books/content?id=eZ2VDAAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+        "thumbnail": "http://books.google.com/books/content?id=eZ2VDAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+    },
+    "language": "fr",
+    "previewLink": "http://books.google.fr/books?id=eZ2VDAAAQBAJ&printsec=frontcover&dq=Le+Seigneur+des+Anneaux&hl=&cd=1&source=gbs_api",
+    "infoLink": "http://books.google.fr/books?id=eZ2VDAAAQBAJ&dq=Le+Seigneur+des+Anneaux&hl=&source=gbs_api",
+    "canonicalVolumeLink": "https://books.google.com/books/about/Le_Seigneur_des_anneaux_Tome_2_Les_Deux.html?hl=&id=eZ2VDAAAQBAJ"
+}
