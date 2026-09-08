@@ -8,6 +8,28 @@ use std::sync::Arc;
 use dotenv::dotenv;
 use api::router::books::books_router;
 use sea_orm::DatabaseConnection;
+use api::dto::responses::author::AuthorDto;
+use api::dto::responses::book::BookDto;
+use api::dto::responses::categories::CategoryDto;
+use api::dto::responses::search_books::{BookSearchResponse, PaginationDto};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        crate::api::controller::books::get_books_by_recherche,
+        crate::api::controller::books::get_book_by_id,
+        crate::api::controller::books::get_books_by_category_id
+    ),
+    components(
+        schemas(BookDto, CategoryDto, AuthorDto, PaginationDto, BookSearchResponse)
+    ),
+    tags(
+        (name = "books", description = "Gestion du catalogue et recherche de livres")
+    )
+)]
+struct ApiDoc;
 
 pub struct AppState {
     pub api_key: String,
@@ -45,6 +67,7 @@ async fn main() {
 
     // 4. Configuration du routeur Axum
     let app = Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .nest("/api", books_router()) 
         .with_state(state);
 

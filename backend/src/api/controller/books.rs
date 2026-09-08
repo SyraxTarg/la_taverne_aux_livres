@@ -2,7 +2,8 @@ use axum::{
     extract::{State, Query, Path},
     Json
 };
-use serde::Deserialize;
+use serde::{Serialize, Deserialize}; // 👈 Ajout de Serialize
+use utoipa::{ToSchema, IntoParams};
 use serde_json::{json, Number, Value};
 use std::sync::Arc;
 use std::collections::HashSet; // 👈 1. Import du HashSet pour les catégories
@@ -15,13 +16,23 @@ use crate::api::dto::responses::search_books::{BookSearchResponse, PaginationDto
 use crate::api::dto::responses::author::AuthorDto;
 use crate::api::dto::responses::categories::CategoryDto;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 pub struct ParametresRecherche {
     pub recherche: Option<String>,
     pub offset: Option<usize>,
     pub limit: Option<usize>,
 }
 
+
+#[utoipa::path(
+    get,
+    path = "/api/books",
+    params(ParametresRecherche),
+    responses(
+        (status = 200, description = "Liste des livres trouvés", body = BookSearchResponse),
+        (status = 500, description = "Erreur de l'API Google Books")
+    )
+)]
 pub async fn get_books_by_recherche(
     State(state): State<Arc<AppState>>,
     Query(params): Query<ParametresRecherche>,
@@ -153,6 +164,20 @@ pub async fn get_books_by_recherche(
     }
 }
 
+
+
+#[utoipa::path(
+    get,
+    path = "/api/books/{id}",
+    params(
+        ("id" = String, Path, description = "L'identifiant unique du livre chez Google Books")
+    ),
+    responses(
+        (status = 200, description = "Détails complets du livre", body = BookDto),
+        (status = 404, description = "Livre introuvable"),
+        (status = 500, description = "Erreur lors de la communication avec l'API Google Books")
+    )
+)]
 pub async fn get_book_by_id(
     State(state): State<Arc<AppState>>,
     Path(book_id): Path<String>,
@@ -209,6 +234,20 @@ pub async fn get_book_by_id(
     }
 }
 
+
+#[utoipa::path(
+    get,
+    path = "/api/books/category/{id}",
+    params(
+        ("id" = i32, Path, description = "L'ID de la catégorie stockée dans la base de données locale"),
+        ParametresRecherche // 👈 Récupère automatiquement tes paramètres (limit, offset)
+    ),
+    responses(
+        (status = 200, description = "Liste des livres correspondant à la catégorie", body = BookSearchResponse),
+        (status = 404, description = "Catégorie introuvable dans la base de données"),
+        (status = 500, description = "Erreur interne ou de l'API Google Books")
+    )
+)]
 pub async fn get_books_by_category_id(
     State(state): State<Arc<AppState>>,
     Path(category_id): Path<i32>, // 👈 On récupère l'ID de l'URL
