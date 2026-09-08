@@ -1,0 +1,278 @@
+---
+// src/components/Comments.astro
+import { commentsByBookId } from '../data/books';
+
+interface Props {
+  bookId: string;
+}
+
+const { bookId } = Astro.props;
+const comments = commentsByBookId[bookId] ?? [];
+---
+
+<section class="comments-block" data-book-id={bookId}>
+  <div class="block-header">
+    <h2>Commentaires ({comments.length})</h2>
+    <p>Partagez votre avis de lecture.</p>
+  </div>
+
+  <form id="comment-form" class="comment-form">
+    <div class="field">
+      <label for="author-input">Nom ou pseudo</label>
+      <input type="text" id="author-input" name="author" placeholder="Votre nom" required />
+    </div>
+
+    <div class="field">
+      <label for="content-input">Votre commentaire</label>
+      <textarea id="content-input" name="content" rows="3" placeholder="Donnez vos impressions sur ce livre..." required></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" id="submit-btn">Envoyer mon commentaire</button>
+      <span id="status-message" class="status-box hidden"></span>
+    </div>
+  </form>
+
+  <div class="comments-list" id="comments-list">
+    {comments.length === 0 ? (
+      <p class="empty-text" id="empty-state">
+        Aucun commentaire pour le moment. Soyez le premier à donner votre avis !
+      </p>
+    ) : (
+      comments.map((item) => (
+        <article class="comment-card">
+          <div class="comment-top">
+            <strong>{item.author}</strong>
+            <time>{item.date}</time>
+          </div>
+          <p class="comment-body">{item.content}</p>
+        </article>
+      ))
+    )}
+  </div>
+</section>
+
+<script>
+  const form = document.getElementById("comment-form") as HTMLFormElement;
+  const list = document.getElementById("comments-list") as HTMLDivElement;
+  const submitBtn = document.getElementById("submit-btn") as HTMLButtonElement;
+  const statusMsg = document.getElementById("status-message") as HTMLSpanElement;
+  const emptyState = document.getElementById("empty-state");
+
+  async function sendCommentMock(payload: { bookId: string; author: string; content: string }) {
+    await new Promise((resolve) => setTimeout(resolve, 450));
+
+    if (!payload.content || payload.content.trim().length < 3) {
+      throw new Error("Votre commentaire est trop court.");
+    }
+
+    return {
+      success: true,
+      data: {
+        author: payload.author,
+        content: payload.content,
+        date: new Date().toLocaleDateString("fr-FR")
+      }
+    };
+  }
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const authorInput = document.getElementById("author-input") as HTMLInputElement;
+    const contentInput = document.getElementById("content-input") as HTMLTextAreaElement;
+    const container = form.closest(".comments-block") as HTMLElement;
+    const bookId = container?.dataset.bookId || "";
+
+    const author = authorInput.value.trim();
+    const content = contentInput.value.trim();
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Envoi...";
+    statusMsg.className = "status-box hidden";
+    statusMsg.textContent = "";
+
+    try {
+      const res = await sendCommentMock({ bookId, author, content });
+
+      if (res.success) {
+        if (emptyState) {
+          emptyState.remove();
+        }
+
+        const newComment = document.createElement("article");
+        newComment.className = "comment-card added";
+        newComment.innerHTML = `
+          <div class="comment-top">
+            <strong>${res.data.author}</strong>
+            <time>${res.data.date}</time>
+          </div>
+          <p class="comment-body">${res.data.content}</p>
+        `;
+
+        list.prepend(newComment);
+        form.reset();
+
+        statusMsg.textContent = "Commentaire ajouté avec succès !";
+        statusMsg.className = "status-box success";
+      }
+    } catch (err: any) {
+      statusMsg.textContent = err.message || "Une erreur est survenue.";
+      statusMsg.className = "status-box error";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Envoyer mon commentaire";
+    }
+  });
+</script>
+
+<style is:global>
+  .comment-card {
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .comment-card.added {
+    border-color: #93c5fd;
+    background-color: #f8fafc;
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .comment-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.88rem;
+  }
+
+  .comment-top strong {
+    color: var(--text-primary);
+  }
+
+  .comment-top time {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .comment-body {
+    margin: 0;
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<style>
+  .comments-block {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .block-header h2 {
+    font-size: 1.3rem;
+    margin: 0 0 0.2rem 0;
+  }
+
+  .block-header p {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin: 0 0 1.5rem 0;
+  }
+
+  .comment-form {
+    background-color: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+  }
+
+  label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  input, textarea {
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.8rem;
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    transition: border-color 0.15s;
+  }
+
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: #0f172a;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+  }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  button {
+    background-color: #0f172a;
+    color: #ffffff;
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+
+  button:hover:not(:disabled) {
+    background-color: #334155;
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .status-box {
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .status-box.hidden { display: none; }
+  .status-box.success { color: #16a34a; }
+  .status-box.error { color: #dc2626; }
+
+  .comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .empty-text {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 0.5rem 0;
+  }
+</style>
