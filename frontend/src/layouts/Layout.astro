@@ -1,5 +1,7 @@
 ---
-// src/layouts/TavernLayout.astro
+// src/layouts/Layout.astro
+import Header from '../components/Header.astro';
+
 interface Props {
   pageTitle: string;
 }
@@ -15,18 +17,7 @@ const { pageTitle } = Astro.props;
     <title>{pageTitle} — La Taverne aux Livres</title>
   </head>
   <body>
-    <header class="navbar">
-      <div class="container nav-content">
-        <a href="/" class="brand">
-          <span class="brand-badge">📖</span>
-          <span class="brand-title">La Taverne aux Livres</span>
-        </a>
-
-        <nav class="nav-links">
-          <a href="/" class="nav-link active">Bibliothèque</a>
-        </nav>
-      </div>
-    </header>
+    <Header />
 
     <main class="container main-content">
       <slot />
@@ -86,52 +77,6 @@ const { pageTitle } = Astro.props;
     margin: 0 auto;
     padding: 0 1.5rem;
     width: 100%;
-  }
-
-  .navbar {
-    background-color: #ffffff;
-    border-bottom: 1px solid var(--border-color);
-    position: sticky;
-    top: 0;
-    z-index: 30;
-  }
-
-  .nav-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    height: 60px;
-  }
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    text-decoration: none;
-    color: var(--text-primary);
-    font-weight: 600;
-    font-size: 1.05rem;
-  }
-
-  .brand-badge {
-    font-size: 1.2rem;
-  }
-
-  .nav-links {
-    display: flex;
-    gap: 1.25rem;
-  }
-
-  .nav-link {
-    text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    transition: color 0.15s;
-  }
-
-  .nav-link:hover, .nav-link.active {
-    color: var(--text-primary);
   }
 
   .main-content {
