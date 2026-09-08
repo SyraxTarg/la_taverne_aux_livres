@@ -1,45 +1,109 @@
 {
-    "title": "Le Seigneur des anneaux (Tome 2) - Les Deux Tours",
-    "authors": [
-        "John Ronald Reuel Tolkien"
-    ],
-    "publisher": "Christian Bourgois éditeur",
-    "publishedDate": "2015-10-21",
-    "description": "Les Deux Tours, deuxième partie du Seigneur des Anneaux, poursuit le récit des aventures de Frodo et de ses compagnons, lancés dans leur périple en Terre du Milieu. Avec Merry et Pippin, le lecteur plonge dans les batailles entre les Orques et les Cavaliers du Rohan, avant de rencontrer l’Ent Fangorn ; avec Aragorn, Gimli et Legolas, il assiste incrédule au retour de Gandalf ; avec Frodo et Sam, il suit Gollum le long des chemins périlleux qui mènent vers le royaume du Mordor, le seul lieu où l’Anneau pourrait être détruit. Cette nouvelle traduction prend en compte la dernière version du texte anglais, les indications laissées par J.R.R. Tolkien à l’intention des traducteurs et les découvertes permises par les publications posthumes proposées par Christopher Tolkien. Ce volume contient 16 illustrations d’Alan Lee, entièrement renumérisées, d’une qualité inégalée, ainsi qu’une carte en couleur de la Terre du Milieu.",
-    "industryIdentifiers": [
-        {
-            "type": "ISBN_13",
-            "identifier": "9782267028928"
+    "kind": "books#volume",
+    "id": "V9TODwAAQBAJ",
+    "etag": "kr7kQiwob0w",
+    "selfLink": "https://www.googleapis.com/books/v1/volumes/V9TODwAAQBAJ",
+    "volumeInfo": {
+        "title": "Le prince cruel",
+        "authors": [
+            "Holly Black",
+            "Leslie Damant-Jeandel"
+        ],
+        "publisher": "Rageot Editeur",
+        "publishedDate": "2020-09-02",
+        "description": "Jude a 17 ans et vit à la Haute Cour de Domelfe dans le royaume de Terrafæ. Enlevée au monde des mortels lorsqu’elle n’était qu’une enfant et élevée avec ses sœurs parmi les puissants, elle a appris à se protéger des sortilèges et à se battre à l’épée. Pourtant, elle subit jour après jour les moqueries et les insultes. Car elle n’est qu’une humaine, vouée à la mort, dans un monde où règnent les Fæs, créatures sublimes, immortelles... et cruelles. \u003cbr\u003ePersonne ne la hait plus que le Prince Cardan. Le plus jeune des héritiers de la couronne semble décidé à lui nuire. Jusqu’à la tuer ? Mais Jude, elle, est prête à tout pour gagner sa place à la cour et reprendre le pouvoir sur sa vie.",
+        "industryIdentifiers": [
+            {
+                "type": "ISBN_10",
+                "identifier": "2700263510"
+            },
+            {
+                "type": "ISBN_13",
+                "identifier": "9782700263510"
+            }
+        ],
+        "readingModes": {
+            "text": true,
+            "image": true
         },
-        {
-            "type": "ISBN_10",
-            "identifier": "2267028921"
-        }
-    ],
-    "readingModes": {
-        "text": true,
-        "image": true
+        "pageCount": 544,
+        "printedPageCount": 503,
+        "printType": "BOOK",
+        "categories": [
+            "Young Adult Fiction / Fantasy / Wizards & Witches"
+        ],
+        "maturityRating": "NOT_MATURE",
+        "allowAnonLogging": true,
+        "contentVersion": "1.2.2.0.preview.3",
+        "panelizationSummary": {
+            "containsEpubBubbles": false,
+            "containsImageBubbles": false
+        },
+        "imageLinks": {
+            "smallThumbnail": "http://books.google.com/books/publisher/content?id=V9TODwAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&imgtk=AFLRE70CxckU1o0HeP093IpmY-WXQ7UWx5P_WO0mB_wSuo0PZvINmqPK_3_CcRiQTflpyYfJqccY-bVKL_4ROhjbh68zBXUjAQaYO3f9LuHp-tXzwnD2X2pv1Fbz5DsGg73agwtGfO7_&source=gbs_api",
+            "thumbnail": "http://books.google.com/books/publisher/content?id=V9TODwAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&imgtk=AFLRE71a3myNxHRwlFj-ohAdn5-eBeqj0QiOJtFpoqtP60PStklYwx15WIruI0m105I46S-gmZO8ZS3cSqK_vyEwL9Ird0xC9yEDrK2CJBITYbizprqOKJC9JQYtqktW6rG9pTM99S0j&source=gbs_api",
+            "small": "http://books.google.com/books/publisher/content?id=V9TODwAAQBAJ&printsec=frontcover&img=1&zoom=2&edge=curl&imgtk=AFLRE71vZUNLXX2fy1taRyWLueMmsmp1HlsgMFKABq4Bbp1pC2jjrXgccf2G7_eFyT-PMH-0JfvWu1Hv69FUMPO7gdIfeLMw___sl5Ipu9G49UnSfkIO_2XPdCjz0gEb9dERZ8rT67aJ&source=gbs_api",
+            "medium": "http://books.google.com/books/publisher/content?id=V9TODwAAQBAJ&printsec=frontcover&img=1&zoom=3&edge=curl&imgtk=AFLRE72tAwCOt9eI3zl4OzXok5-8fOSlviPQqAQkqx6D_XwsmjJKxJxmXC7TWUEnGtglgQ2lhE2G3lWpsUvpIe-_QCBjPQkYANZbqkNSbhVgGCXwF-cymg-Am01W1wuSDQJXYoGloQ0R&source=gbs_api",
+            "large": "http://books.google.com/books/publisher/content?id=V9TODwAAQBAJ&printsec=frontcover&img=1&zoom=4&edge=curl&imgtk=AFLRE70sK0Fic3DsxwpEWmU18PGSUhJmwAJt9E_QbeeX0MtVKWLwrqHs7BCopePgctpSsWDrJLzK4gFgThriw6SiZc74Jav-5bRgpHPVlDsVltCkrSG1xBfWCOIb8c2fBvuXurxTN4H5&source=gbs_api",
+            "extraLarge": "http://books.google.com/books/publisher/content?id=V9TODwAAQBAJ&printsec=frontcover&img=1&zoom=6&edge=curl&imgtk=AFLRE70KhiE3aeCSQV8rEFaE1ddNLEYG-flMCernRzred2JuMVRoZx8h87k7P6tv97SY0gVB6LujPWsgh1VqSEj0aa2c5pXlo2M7XjvbjI43OXEMoUFbjfWoY2l2XT3CyWMRaG1Gvi1t&source=gbs_api"
+        },
+        "language": "fr",
+        "previewLink": "http://books.google.fr/books?id=V9TODwAAQBAJ&hl=&source=gbs_api",
+        "infoLink": "https://play.google.com/store/books/details?id=V9TODwAAQBAJ&source=gbs_api",
+        "canonicalVolumeLink": "https://play.google.com/store/books/details?id=V9TODwAAQBAJ"
     },
-    "pageCount": 424,
-    "printType": "BOOK",
-    "categories": [
-        "Fiction"
-    ],
-    "averageRating": 5,
-    "ratingsCount": 1,
-    "maturityRating": "NOT_MATURE",
-    "allowAnonLogging": true,
-    "contentVersion": "1.16.14.0.preview.3",
-    "panelizationSummary": {
-        "containsEpubBubbles": false,
-        "containsImageBubbles": false
+    "layerInfo": {
+        "layers": [
+            {
+                "layerId": "geo",
+                "volumeAnnotationsVersion": "2"
+            }
+        ]
     },
-    "imageLinks": {
-        "smallThumbnail": "http://books.google.com/books/content?id=eZ2VDAAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
-        "thumbnail": "http://books.google.com/books/content?id=eZ2VDAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+    "saleInfo": {
+        "country": "FR",
+        "saleability": "FOR_SALE",
+        "isEbook": true,
+        "listPrice": {
+            "amount": 14.99,
+            "currencyCode": "EUR"
+        },
+        "retailPrice": {
+            "amount": 14.99,
+            "currencyCode": "EUR"
+        },
+        "buyLink": "https://play.google.com/store/books/details?id=V9TODwAAQBAJ&rdid=book-V9TODwAAQBAJ&rdot=1&source=gbs_api",
+        "offers": [
+            {
+                "finskyOfferType": 1,
+                "listPrice": {
+                    "amountInMicros": 14990000,
+                    "currencyCode": "EUR"
+                },
+                "retailPrice": {
+                    "amountInMicros": 14990000,
+                    "currencyCode": "EUR"
+                },
+                "giftable": true
+            }
+        ]
     },
-    "language": "fr",
-    "previewLink": "http://books.google.fr/books?id=eZ2VDAAAQBAJ&printsec=frontcover&dq=Le+Seigneur+des+Anneaux&hl=&cd=1&source=gbs_api",
-    "infoLink": "http://books.google.fr/books?id=eZ2VDAAAQBAJ&dq=Le+Seigneur+des+Anneaux&hl=&source=gbs_api",
-    "canonicalVolumeLink": "https://books.google.com/books/about/Le_Seigneur_des_anneaux_Tome_2_Les_Deux.html?hl=&id=eZ2VDAAAQBAJ"
+    "accessInfo": {
+        "country": "FR",
+        "viewability": "PARTIAL",
+        "embeddable": true,
+        "publicDomain": false,
+        "textToSpeechPermission": "ALLOWED",
+        "epub": {
+            "isAvailable": true,
+            "acsTokenLink": "http://books.google.fr/books/download/Le_prince_cruel-sample-epub.acsm?id=V9TODwAAQBAJ&format=epub&output=acs4_fulfillment_token&dl_type=sample&source=gbs_api"
+        },
+        "pdf": {
+            "isAvailable": true,
+            "acsTokenLink": "http://books.google.fr/books/download/Le_prince_cruel-sample-pdf.acsm?id=V9TODwAAQBAJ&format=pdf&output=acs4_fulfillment_token&dl_type=sample&source=gbs_api"
+        },
+        "webReaderLink": "http://play.google.com/books/reader?id=V9TODwAAQBAJ&hl=&source=gbs_api",
+        "accessViewStatus": "SAMPLE",
+        "quoteSharingAllowed": false
+    }
 }
