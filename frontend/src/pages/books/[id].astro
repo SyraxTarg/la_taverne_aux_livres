@@ -1,0 +1,188 @@
+---
+// src/pages/books/[id].astro
+import TavernLayout from '../../layouts/TavernLayout.astro';
+import Comments from '../../components/Comments.astro';
+import { booksList, type Book } from '../../data/books';
+
+export async function getStaticPaths() {
+  return booksList.map((book) => ({
+    params: { id: book.id },
+    props: { book }
+  }));
+}
+
+interface Props {
+  book: Book;
+}
+
+const { book } = Astro.props;
+---
+
+<TavernLayout pageTitle={`${book.title} — ${book.author}`}>
+  <article class="book-card-detail">
+    <a href="/" class="back-btn">← Retour à la liste</a>
+
+    <div class="book-columns">
+      <aside class="sidebar">
+        <div class="cover-box">
+          <img src={book.coverImage} alt={book.title} />
+        </div>
+
+        <div class="meta-box">
+          <div class="meta-row">
+            <span>Auteur</span>
+            <strong>{book.author}</strong>
+          </div>
+          <div class="meta-row">
+            <span>Année</span>
+            <strong>{book.year}</strong>
+          </div>
+          <div class="meta-row">
+            <span>Note</span>
+            <strong>{book.rating} / 5</strong>
+          </div>
+        </div>
+      </aside>
+
+      <section class="main-info">
+        <header class="header">
+          {book.isStaffPick && (
+            <span class="favorite-badge">Coup de cœur</span>
+          )}
+          <h1>{book.title}</h1>
+        </header>
+
+        <div class="section">
+          <h2>Mon avis</h2>
+          <p>{book.review}</p>
+        </div>
+
+        <div class="section">
+          <h2>Points clés</h2>
+          <ul class="points-list">
+            {book.highlights.map((item) => (
+              <li>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <Comments bookId={book.id} />
+  </article>
+</TavernLayout>
+
+<style>
+  .book-card-detail {
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  .back-btn {
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    margin-bottom: 2rem;
+  }
+
+  .back-btn:hover {
+    color: var(--text-primary);
+  }
+
+  .book-columns {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 2.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .book-columns {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+
+  .cover-box {
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: #f1f5f9;
+    border: 1px solid var(--border-color);
+  }
+
+  .cover-box img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .meta-box {
+    margin-top: 1rem;
+    background-color: #f8fafc;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    border: 1px solid var(--border-color);
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+  }
+
+  .meta-row span {
+    color: var(--text-secondary);
+  }
+
+  .favorite-badge {
+    display: inline-block;
+    background-color: #fef3c7;
+    color: #92400e;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+  }
+
+  .header h1 {
+    font-size: 2rem;
+    margin: 0 0 1.25rem 0;
+  }
+
+  .section {
+    margin-bottom: 1.5rem;
+  }
+
+  .section h2 {
+    font-size: 1.15rem;
+    margin: 0 0 0.4rem 0;
+  }
+
+  .section p {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .points-list {
+    padding-left: 1.2rem;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .points-list li {
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+  }
+</style>
