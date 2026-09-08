@@ -4,16 +4,16 @@ pub mod proxy;
 use axum::Router;
 use reqwest::Client;
 use std::env;
-use sqlx::PgPool;
 use std::sync::Arc;
 use dotenv::dotenv;
 use api::router::books::books_router;
+use sea_orm::DatabaseConnection;
 
 pub struct AppState {
     pub api_key: String,
     pub api_url: String,
     pub http_client: Client,
-    pub db_pool: PgPool,
+    pub db_pool: DatabaseConnection,
 }
 
 #[tokio::main]
@@ -26,13 +26,11 @@ async fn main() {
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL manquante dans le .env");
 
     // 2. Initialisation de la connexion à la base de données PostgreSQL
-    println!("⏳ Connexion à PostgreSQL...");
-    let db_pool = sqlx::postgres::PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&database_url)
+    println!("⏳ Connexion à PostgreSQL via SeaORM...");
+    let db_pool = sea_orm::Database::connect(&database_url)
         .await
         .expect("❌ Impossible de se connecter à PostgreSQL.");
-    println!("✅ Connecté à PostgreSQL avec succès !");
+    println!("✅ Connecté avec SeaORM !");
 
     // 👇 Appel de l'initialisation de la table au démarrage
     crate::api::repo::categories::creer_table_si_inexistante(&db_pool).await;
