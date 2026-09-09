@@ -5,10 +5,15 @@ import BookCard from '../components/BookCard.astro';
 import { API_URL } from 'astro:env/server';
 import type { ApiBook } from '../data/books';
 
+const BOOK_DISPLAYED_LIMIT = 9;
+
 let booksList = [];
 
 try {
-  const response = await fetch(`${API_URL}/books`);
+  const apiUrl = new URL(`${API_URL}/books`);
+  apiUrl.searchParams.set('limit', String(BOOK_DISPLAYED_LIMIT));
+
+  const response = await fetch(apiUrl);
   if (response.ok) {
     const booksListJson = await response.json();
     booksList = booksListJson.livres
@@ -27,7 +32,7 @@ try {
   </section>
 
   <div class="list-head">
-    <h2>Tous les livres ({booksList.length})</h2>
+    <h2>Sélection de livres du jour</h2>
   </div>
 
   <section class="books-grid">

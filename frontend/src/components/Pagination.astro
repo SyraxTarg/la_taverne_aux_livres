@@ -1,0 +1,154 @@
+
+---
+// src/components/Pagination.astro
+
+interface Props {
+  currentPage: number;
+  totalPages: number;
+  baseQuery?: string;
+}
+
+const { currentPage, totalPages, baseQuery = '' } = Astro.props;
+
+if (totalPages <= 1) return;
+
+const buildPageUrl = (targetPage: number) => {
+  const params = new URLSearchParams();
+  if (baseQuery) params.set('q', baseQuery);
+  params.set('page', targetPage.toString());
+  return `?${params.toString()}`;
+};
+
+const delta = 3; // Nombre de pages affichées avant et après la page courante
+const range: number[] = [];
+const visiblePages: (number | string)[] = [];
+
+for (
+  let i = Math.max(2, currentPage - delta);
+  i <= Math.min(totalPages - 1, currentPage + delta);
+  i++
+) {
+  range.push(i);
+}
+
+if (currentPage - delta > 2) {
+  visiblePages.push(1, '...');
+} else {
+  visiblePages.push(1);
+}
+
+visiblePages.push(...range);
+
+if (currentPage + delta < totalPages - 1) {
+  visiblePages.push('...', totalPages);
+} else if (totalPages > 1) {
+  visiblePages.push(totalPages);
+}
+---
+
+<nav class="pagination" aria-label="Pagination des résultats">
+  <a
+    href={buildPageUrl(currentPage - 1)}
+    class={`pagination-btn ${currentPage <= 1 ? 'disabled' : ''}`}
+    aria-disabled={currentPage <= 1}
+    tabindex={currentPage <= 1 ? -1 : undefined}
+  >
+    ← Précédent
+  </a>
+
+  <div class="pagination-pages">
+    {visiblePages.map((item) =>
+      item === '...' ? (
+        <span class="pagination-ellipsis" aria-hidden="true">…</span>
+      ) : (
+        <a
+          href={buildPageUrl(item as number)}
+          class={`pagination-link ${item === currentPage ? 'active' : ''}`}
+          aria-current={item === currentPage ? 'page' : undefined}
+        >
+          {item}
+        </a>
+      )
+    )}
+  </div>
+
+  <a
+    href={buildPageUrl(currentPage + 1)}
+    class={`pagination-btn ${currentPage >= totalPages ? 'disabled' : ''}`}
+    aria-disabled={currentPage >= totalPages}
+    tabindex={currentPage >= totalPages ? -1 : undefined}
+  >
+    Suivant →
+  </a>
+</nav>
+
+<style>
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .pagination-pages {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .pagination-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    color: var(--text-secondary, #888);
+    font-size: 1.1rem;
+    user-select: none;
+  }
+
+  .pagination-link,
+  .pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary, inherit);
+    background: var(--bg-card, #fff);
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+  }
+
+  .pagination-btn {
+    padding: 0.4rem 0.85rem;
+  }
+
+  .pagination-link {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .pagination-link:hover:not(.active),
+  .pagination-btn:hover:not(.disabled) {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+  }
+
+  .pagination-link.active {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: #fff;
+    font-weight: bold;
+    cursor: default;
+  }
+
+  .pagination-btn.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+</style>
