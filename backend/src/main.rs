@@ -7,11 +7,16 @@ use std::env;
 use std::sync::Arc;
 use dotenv::dotenv;
 use api::router::books::books_router;
+use api::router::auth::auth_router;
+use api::router::user::user_router;
 use sea_orm::DatabaseConnection;
 use api::dto::responses::author::AuthorDto;
 use api::dto::responses::book::BookDto;
 use api::dto::responses::categories::CategoryDto;
+use api::dto::requests::auth::{LoginDto, RegisterDto};
 use api::dto::responses::search_books::{BookSearchResponse, PaginationDto};
+use api::dto::responses::auth::{LoginResponseDto};
+use api::dto::responses::user::UserResponseDto;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -20,13 +25,18 @@ use utoipa_swagger_ui::SwaggerUi;
     paths(
         crate::api::controller::books::get_books_by_recherche,
         crate::api::controller::books::get_book_by_id,
-        crate::api::controller::books::get_books_by_category_id
+        crate::api::controller::books::get_books_by_category_id,
+        crate::api::controller::auth::login,
+        crate::api::controller::auth::register,
+        crate::api::controller::users::get_me
     ),
     components(
-        schemas(BookDto, CategoryDto, AuthorDto, PaginationDto, BookSearchResponse)
+        schemas(BookDto, CategoryDto, AuthorDto, PaginationDto, BookSearchResponse, LoginDto, RegisterDto, LoginResponseDto, UserResponseDto)
     ),
     tags(
-        (name = "books", description = "Gestion du catalogue et recherche de livres")
+        (name = "books", description = "Gestion du catalogue et recherche de livres"),
+        (name = "auth", description = "Gestion de l'authentification"),
+        (name = "utilisateurs", description = "Gestion des utilisateurs"),
     )
 )]
 struct ApiDoc;
@@ -56,6 +66,8 @@ async fn main() {
 
     // 👇 Appel de l'initialisation de la table au démarrage
     crate::api::repo::categories::creer_table_si_inexistante(&db_pool).await;
+    crate::api::repo::roles::creer_table_et_roles_base(&db_pool).await.expect("Erreur lors de l'initialisation des rôles");
+    crate::api::repo::users::creer_table_si_inexistante(&db_pool).await;
 
     // 3. Création de l'état partagé (AppState)
     let state = Arc::new(AppState {
@@ -68,7 +80,9 @@ async fn main() {
     // 4. Configuration du routeur Axum
     let app = Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
-        .nest("/api", books_router()) 
+        .nest("/api/books", books_router())
+        .nest("/api/auth", auth_router())
+        .nest("/api/users", user_router())
         .with_state(state);
 
     // 5. Démarrage du serveur

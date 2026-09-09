@@ -1,0 +1,15 @@
+meta {
+  name: Get Me
+  type: http
+  seq: 6
+}
+
+get {
+  url: http://127.0.0.1:3000/api/books/category/2
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJsYWxhQG1haWwuY29tIiwicm9sZSI6ImFkbWluIiwiZXhwIjoxNzg5MDQzNjQ0fQ.ci21IfLoT0OppGToGJwg9TdKGyXcSh46CoWW8XBFPsw
+}

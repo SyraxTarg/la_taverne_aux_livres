@@ -1,5 +1,7 @@
+use std::collections::HashSet;
 use crate::api::entities::category;
 use sea_orm::*;
+use crate::api::repo::categories as repo;
 
 
 pub async fn creer_table_si_inexistante(db: &DatabaseConnection) {
@@ -15,19 +17,18 @@ pub async fn creer_table_si_inexistante(db: &DatabaseConnection) {
 }
 
 
-pub async fn insert_category(
+// Sauvegarde intelligente avec l'ORM (ActiveModel)
+pub async fn sauvegarder_nouvelles_categories(
     db: &DatabaseConnection,
-    category: String,
+    categories: HashSet<String>,
 ) {
-    let new_category = category::ActiveModel {
-            name: Set(category.clone()),
-            ..Default::default() // L'ID s'incrémente tout seul
-        };
+    if categories.is_empty() {
+        return;
+    }
+    println!("💾 [ORM] Sauvegarde de {} catégories...", categories.len());
 
-    match new_category.insert(db).await {
-        Ok(_) => println!(" - ✅ Inséré : {}", category),
-        Err(_) => {
-        }
+    for categorie_nom in categories {
+        repo::insert_category(db, categorie_nom).await
     }
 }
 
@@ -36,11 +37,7 @@ pub async fn get_category_name_by_id(
     db: &DatabaseConnection,
     category_id: i32
 ) -> Result<Option<String>, DbErr> {
+    println!("🔍 Recherche de la catégorie avec l'ID : {}", category_id);
 
-    // Équivalent propre de "SELECT name FROM categories WHERE id = ?"
-    let cat = category::Entity::find_by_id(category_id)
-        .one(db)
-        .await?;
-
-    Ok(cat.map(|c| c.name))
+    repo::get_category_name_by_id(db, category_id).await
 }

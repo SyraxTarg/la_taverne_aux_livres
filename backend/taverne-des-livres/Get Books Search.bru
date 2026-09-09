@@ -1,0 +1,19 @@
+meta {
+  name: Get Books Search
+  type: http
+  seq: 4
+}
+
+get {
+  url: http://127.0.0.1:3000/api/books?recherche=dune
+  body: none
+  auth: bearer
+}
+
+params:query {
+  recherche: dune
+}
+
+auth:bearer {
+  token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0b3RvIiwicm9sZSI6InVzZXIiLCJleHAiOjE3ODkwMzMyOTV9.Nd_EwhqSkNKO8CIunFoqAN7AyQogALYnlNeUvGCGViA
+}
