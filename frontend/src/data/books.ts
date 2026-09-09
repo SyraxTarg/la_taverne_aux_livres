@@ -8,6 +8,12 @@ export interface Category {
   name: string;
 }
 
+export interface ApiPagination {
+  total_items: number;
+  offset: number;
+  limit: number;
+}
+
 export interface ApiBook {
   id: string;
   title: string;
@@ -23,11 +29,7 @@ export interface ApiBook {
 }
 
 export interface ApiResponse {
-  pagination: {
-    total_items: number;
-    offset: number;
-    limit: number;
-  };
+  pagination: ApiPagination;
   livres: ApiBook[];
 }
 

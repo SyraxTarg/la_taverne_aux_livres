@@ -4,7 +4,9 @@ export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
 import BookCardHorizontal from '../components/BookCardHorizontal.astro';
-import { booksList } from '../data/books';
+import Pagination from '../components/Pagination.astro';
+import { API_URL } from 'astro:env/server';
+import type { ApiBook, ApiPagination } from '../data/books';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -12,19 +14,31 @@ const query = Astro.url.searchParams.get('q') || '';
 const pageParam = Astro.url.searchParams.get('page');
 const currentPage = Math.max(1, parseInt(pageParam || '1', 10) || 1);
 
-const totalItems = booksList.length;
+const apiUrl = new URL(`${API_URL}/books`);
+if (query) {
+  apiUrl.searchParams.set('recherche', query);
+}
+apiUrl.searchParams.set('limit', String(ITEMS_PER_PAGE));
+apiUrl.searchParams.set('offset', String((currentPage - 1) * ITEMS_PER_PAGE));
+
+let booksList: ApiBook[] = [];
+let pagination: ApiPagination | null = null;
+
+try {
+  const response = await fetch(apiUrl.toString());
+  if (response.ok) {
+    const booksListJson = await response.json();
+    booksList = booksListJson.livres ?? [];
+    pagination = booksListJson.pagination ?? null;
+  } else {
+    console.error(`Erreur API (${response.status}):`, await response.text());
+  }
+} catch (error) {
+  console.error('Erreur lors de la récupération des livres :', error);
+}
+
+const totalItems = pagination ? pagination.total_items : booksList.length;
 const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
-
-const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-const endIndex = startIndex + ITEMS_PER_PAGE;
-const results = booksList.slice(startIndex, endIndex);
-
-const buildPageUrl = (targetPage: number) => {
-  const params = new URLSearchParams();
-  if (query) params.set('q', query);
-  params.set('page', targetPage.toString());
-  return `?${params.toString()}`;
-};
 ---
 
 <Layout pageTitle={`Recherche : "${query}"`}>
@@ -43,44 +57,16 @@ const buildPageUrl = (targetPage: number) => {
   </section>
 
   <section class="results-stack">
-    {results.map((book) => (
+    {booksList.map((book) => (
       <BookCardHorizontal {book} />
     ))}
   </section>
 
-  {totalPages > 1 && (
-    <nav class="pagination" aria-label="Pagination des résultats">
-      <a
-        href={buildPageUrl(currentPage - 1)}
-        class={`pagination-btn ${currentPage <= 1 ? 'disabled' : ''}`}
-        aria-disabled={currentPage <= 1}
-        tabindex={currentPage <= 1 ? -1 : undefined}
-      >
-        ← Précédent
-      </a>
-
-      <div class="pagination-pages">
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-          <a
-            href={buildPageUrl(pageNum)}
-            class={`pagination-link ${pageNum === currentPage ? 'active' : ''}`}
-            aria-current={pageNum === currentPage ? 'page' : undefined}
-          >
-            {pageNum}
-          </a>
-        ))}
-      </div>
-
-      <a
-        href={buildPageUrl(currentPage + 1)}
-        class={`pagination-btn ${currentPage >= totalPages ? 'disabled' : ''}`}
-        aria-disabled={currentPage >= totalPages}
-        tabindex={currentPage >= totalPages ? -1 : undefined}
-      >
-        Suivant →
-      </a>
-    </nav>
-  )}
+  <Pagination
+    currentPage={currentPage}
+    totalPages={totalPages}
+    baseQuery={query}
+  />
 </Layout>
 
 <style>
@@ -126,63 +112,5 @@ const buildPageUrl = (targetPage: number) => {
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
-  }
-
-  .pagination {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 2.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--border-color);
-  }
-
-  .pagination-pages {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .pagination-link,
-  .pagination-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    color: var(--text-primary, inherit);
-    background: var(--bg-card, #fff);
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-  }
-
-  .pagination-btn {
-    padding: 0.4rem 0.85rem;
-  }
-
-  .pagination-link {
-    width: 2.25rem;
-    height: 2.25rem;
-  }
-
-  .pagination-link:hover:not(.active),
-  .pagination-btn:hover:not(.disabled) {
-    border-color: var(--accent-color);
-    color: var(--accent-color);
-  }
-
-  .pagination-link.active {
-    background-color: var(--accent-color);
-    border-color: var(--accent-color);
-    color: #fff;
-    font-weight: bold;
-    cursor: default;
-  }
-
-  .pagination-btn.disabled {
-    opacity: 0.4;
-    pointer-events: none;
-    cursor: not-allowed;
   }
 </style>
