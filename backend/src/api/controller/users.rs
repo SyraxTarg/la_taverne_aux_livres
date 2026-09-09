@@ -14,7 +14,7 @@ use crate::api::service::users as service;
 // Cette route est protégée !
 #[utoipa::path(
     get,
-    path = "/api/profil",
+    path = "/api/users/me",
     responses(
         (status = 200, description = "Profil récupéré"),
         (status = 401, description = "Non autorisé"),
