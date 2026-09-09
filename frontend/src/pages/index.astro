@@ -2,7 +2,22 @@
 // src/pages/index.astro
 import Layout from '../layouts/Layout.astro';
 import BookCard from '../components/BookCard.astro';
-import { booksList } from '../data/books';
+import { API_URL } from 'astro:env/server';
+import type { ApiBook } from '../data/books';
+
+let booksList = [];
+
+try {
+  const response = await fetch(`${API_URL}/books`);
+  if (response.ok) {
+    const booksListJson = await response.json();
+    booksList = booksListJson.livres
+  } else {
+    console.error(`Erreur API : ${response.status}`);
+  }
+} catch (error) {
+  console.error('Impossible de joindre l\'API :', error);
+}
 ---
 
 <Layout pageTitle="Bibliothèque">
@@ -16,7 +31,7 @@ import { booksList } from '../data/books';
   </div>
 
   <section class="books-grid">
-    {booksList.map((book) => (
+    {booksList.map((book : ApiBook) => (
       <BookCard {book} />
     ))}
   </section>
