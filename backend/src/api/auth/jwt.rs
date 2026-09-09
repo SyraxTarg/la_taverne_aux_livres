@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: String,  // Email ou ID de l'utilisateur
+    pub id: i32,
     pub role: String, // ex: "admin" ou "viewer"
     pub exp: usize,   // Date d'expiration
 }
@@ -18,7 +19,7 @@ pub struct Claims {
 // 1. GESTION DES TOKENS JWT
 // -------------------------------------------------------------------------
 
-pub fn create_jwt(email: &str, role: &str) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn create_jwt(user_id: i32, email: &str, role: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let expiration = Utc::now()
         .checked_add_signed(Duration::hours(24))
         .expect("Date valide")
@@ -26,6 +27,7 @@ pub fn create_jwt(email: &str, role: &str) -> Result<String, jsonwebtoken::error
 
     let claims = Claims {
         sub: email.to_owned(),
+        id: user_id.to_owned(),
         role: role.to_owned(),
         exp: expiration,
     };

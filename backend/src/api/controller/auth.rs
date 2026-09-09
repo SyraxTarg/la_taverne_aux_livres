@@ -57,7 +57,7 @@ pub async fn login(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<LoginDto>,
 ) -> Result<Json<LoginResponseDto>, Json<Value>> {
-    
+
     // 1. Récupération de l'utilisateur
     let user = service::find_by_email(&state.db_pool, &payload.email)
         .await
@@ -85,7 +85,7 @@ pub async fn login(
 
     // 4. Création du JWT
     // (Ajoute un & devant role_name si ta fonction create_jwt attend un &str plutôt qu'une String)
-    let token = create_jwt(&user.email, &role_name).map_err(|_| {
+    let token = create_jwt(user.id, &user.email, &role_name).map_err(|_| {
         Json(json!({ "erreur": "Erreur lors de la génération du token" }))
     })?;
 
