@@ -1,0 +1,224 @@
+---
+// src/components/RatingWidget.astro
+interface Props {
+  bookId: string;
+  initialRating?: number;
+}
+
+const { bookId, initialRating } = Astro.props;
+---
+
+<section class="rating-widget" data-book-id={bookId}>
+  <div class="rating-header">
+    <h3>Votre note</h3>
+    <p>Donnez une note de 1 à 5 étoiles à cette lecture.</p>
+  </div>
+
+  <div class="stars-group" role="radiogroup" aria-label="Noter ce livre">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <button
+        type="button"
+        class={`star-btn ${initialRating && star <= initialRating ? 'is-active' : ''}`}
+        data-rating={star}
+        aria-label={`${star} sur 5`}
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+        </svg>
+      </button>
+    ))}
+  </div>
+
+  <div class="rating-footer">
+    <span class="rating-score" id="score-text">
+      {initialRating ? `Votre note : ${initialRating}/5` : "Pas encore de note"}
+    </span>
+    <span class="rating-feedback hidden" id="rating-feedback"></span>
+  </div>
+</section>
+
+<script>
+  // Simulation de l'appel API (POST /api/ratings)
+  async function submitRatingMock(payload: { bookId: string; rating: number }) {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    if (payload.rating < 1 || payload.rating > 5) {
+      throw new Error("La note doit être comprise entre 1 et 5.");
+    }
+
+    return {
+      success: true,
+      data: {
+        bookId: payload.bookId,
+        rating: payload.rating,
+        savedAt: new Date().toISOString()
+      }
+    };
+  }
+
+  // Initialisation du widget
+  const widgets = document.querySelectorAll<HTMLElement>(".rating-widget");
+
+  widgets.forEach((widget) => {
+    const bookId = widget.dataset.bookId || "";
+    const stars = widget.querySelectorAll<HTMLButtonElement>(".star-btn");
+    const scoreText = widget.querySelector<HTMLSpanElement>("#score-text");
+    const feedback = widget.querySelector<HTMLSpanElement>("#rating-feedback");
+
+    let currentRating = 0;
+    let isSubmitting = false;
+
+    const highlightStars = (count: number) => {
+      stars.forEach((star) => {
+        const value = Number(star.dataset.rating);
+        star.classList.toggle("hovered", value <= count);
+      });
+    };
+
+    const resetStarStyles = () => {
+      stars.forEach((star) => {
+        star.classList.remove("hovered");
+        const value = Number(star.dataset.rating);
+        star.classList.toggle("is-active", value <= currentRating);
+      });
+    };
+
+    stars.forEach((star) => {
+      // Effet de prévisualisation au survol
+      star.addEventListener("mouseenter", () => {
+        if (!isSubmitting) {
+          const val = Number(star.dataset.rating);
+          highlightStars(val);
+        }
+      });
+
+      // Envoi de la note au clic
+      star.addEventListener("click", async () => {
+        if (isSubmitting) return;
+
+        const selectedRating = Number(star.dataset.rating);
+        isSubmitting = true;
+        stars.forEach((btn) => (btn.disabled = true));
+
+        if (feedback) {
+          feedback.textContent = "Enregistrement...";
+          feedback.className = "rating-feedback pending";
+        }
+
+        try {
+          const res = await submitRatingMock({ bookId, rating: selectedRating });
+
+          if (res.success) {
+            currentRating = res.data.rating;
+            resetStarStyles();
+
+            if (scoreText) {
+              scoreText.textContent = `Votre note : ${currentRating}/5`;
+            }
+
+            if (feedback) {
+              feedback.textContent = "Note enregistrée !";
+              feedback.className = "rating-feedback success";
+            }
+          }
+        } catch (err: any) {
+          if (feedback) {
+            feedback.textContent = err.message || "Erreur lors de l'enregistrement.";
+            feedback.className = "rating-feedback error";
+          }
+        } finally {
+          isSubmitting = false;
+          stars.forEach((btn) => (btn.disabled = false));
+        }
+      });
+    });
+
+    widget.addEventListener("mouseleave", () => {
+      if (!isSubmitting) {
+        resetStarStyles();
+      }
+    });
+  });
+</script>
+
+<style>
+  .rating-widget {
+    background-color: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+
+  .rating-header h3 {
+    font-size: 0.95rem;
+    margin: 0 0 0.2rem 0;
+    color: var(--text-primary);
+  }
+
+  .rating-header p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0 0 0.75rem 0;
+  }
+
+  .stars-group {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .star-btn {
+    background: none;
+    border: none;
+    padding: 0.15rem;
+    cursor: pointer;
+    color: #cbd5e1; /* Étoile vide / inactive */
+    transition: color 0.15s ease, transform 0.1s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .star-btn:hover:not(:disabled) {
+    transform: scale(1.15);
+  }
+
+  /* Étoiles dorées au survol ou validées */
+  .star-btn.is-active,
+  .star-btn.hovered {
+    color: #f59e0b;
+  }
+
+  .star-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .rating-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+  }
+
+  .rating-score {
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .rating-feedback {
+    font-weight: 500;
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .rating-feedback.hidden { display: none; }
+  .rating-feedback.pending { color: var(--text-muted); }
+  .rating-feedback.success { color: #16a34a; }
+  .rating-feedback.error { color: #dc2626; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+</style>

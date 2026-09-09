@@ -1,0 +1,11 @@
+meta {
+  name: Get book comments
+  type: http
+  seq: 8
+}
+
+get {
+  url: http://127.0.0.1:3000/api/books/id/comments
+  body: none
+  auth: inherit
+}

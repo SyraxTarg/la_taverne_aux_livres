@@ -9,6 +9,7 @@ use dotenv::dotenv;
 use api::router::books::books_router;
 use api::router::auth::auth_router;
 use api::router::user::user_router;
+use api::router::comments::comments_router;
 use sea_orm::DatabaseConnection;
 use api::dto::responses::author::AuthorDto;
 use api::dto::responses::book::BookDto;
@@ -17,6 +18,8 @@ use api::dto::requests::auth::{LoginDto, RegisterDto};
 use api::dto::responses::search_books::{BookSearchResponse, PaginationDto};
 use api::dto::responses::auth::{LoginResponseDto};
 use api::dto::responses::user::UserResponseDto;
+use api::dto::responses::comment::{CommentResponseDto, CommentWithRepliesDto};
+use api::dto::requests::comment::CreateCommentDto;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -28,15 +31,30 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::api::controller::books::get_books_by_category_id,
         crate::api::controller::auth::login,
         crate::api::controller::auth::register,
-        crate::api::controller::users::get_me
+        crate::api::controller::users::get_me,
+        crate::api::controller::comments::create_comment
     ),
     components(
-        schemas(BookDto, CategoryDto, AuthorDto, PaginationDto, BookSearchResponse, LoginDto, RegisterDto, LoginResponseDto, UserResponseDto)
+        schemas(
+            BookDto,
+            CategoryDto,
+            AuthorDto,
+            PaginationDto,
+            BookSearchResponse,
+            LoginDto,
+            RegisterDto,
+            LoginResponseDto,
+            UserResponseDto,
+            CommentResponseDto,
+            CreateCommentDto,
+            CommentWithRepliesDto
+        )
     ),
     tags(
         (name = "books", description = "Gestion du catalogue et recherche de livres"),
         (name = "auth", description = "Gestion de l'authentification"),
         (name = "utilisateurs", description = "Gestion des utilisateurs"),
+        (name = "Commentaires", description = "Gestion des commentaires"),
     )
 )]
 struct ApiDoc;
@@ -68,6 +86,7 @@ async fn main() {
     crate::api::repo::categories::creer_table_si_inexistante(&db_pool).await;
     crate::api::repo::roles::creer_table_et_roles_base(&db_pool).await.expect("Erreur lors de l'initialisation des rôles");
     crate::api::repo::users::creer_table_si_inexistante(&db_pool).await;
+    crate::api::repo::comments::creer_table_si_inexistante(&db_pool).await;
 
     // 3. Création de l'état partagé (AppState)
     let state = Arc::new(AppState {
@@ -83,6 +102,7 @@ async fn main() {
         .nest("/api/books", books_router())
         .nest("/api/auth", auth_router())
         .nest("/api/users", user_router())
+        .nest("/api/comments", comments_router())
         .with_state(state);
 
     // 5. Démarrage du serveur

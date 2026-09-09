@@ -1,3 +1,4 @@
 pub mod books;
 pub mod auth;
 pub mod user;
+pub mod comments;

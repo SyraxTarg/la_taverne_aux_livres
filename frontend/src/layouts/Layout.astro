@@ -1,0 +1,96 @@
+---
+// src/layouts/Layout.astro
+import Header from '../components/Header.astro';
+
+interface Props {
+  pageTitle: string;
+}
+
+const { pageTitle } = Astro.props;
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{pageTitle} — La Taverne aux Livres</title>
+  </head>
+  <body>
+    <Header />
+
+    <main class="container main-content">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <p>© 2026 La Taverne aux Livres — Carnet de lecture personnel</p>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-input: #ffffff;
+    --bg-hover: #f1f5f9;
+
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+
+    --border-color: #e2e8f0;
+    --border-hover: #cbd5e1;
+
+    --accent-color: #d97706;
+    --accent-hover: #b45309;
+    --accent-light: #fef3c7;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1, h2, h3, h4 {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+</style>
+
+<style>
+  .container {
+    max-width: 1020px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    width: 100%;
+  }
+
+  .main-content {
+    flex-grow: 1;
+    padding-top: 2.5rem;
+    padding-bottom: 4rem;
+  }
+
+  .site-footer {
+    border-top: 1px solid var(--border-color);
+    background-color: #ffffff;
+    padding: 1.5rem 0;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+</style>
