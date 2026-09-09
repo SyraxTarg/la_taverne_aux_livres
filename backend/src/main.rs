@@ -68,6 +68,7 @@ async fn main() {
     crate::api::repo::categories::creer_table_si_inexistante(&db_pool).await;
     crate::api::repo::roles::creer_table_et_roles_base(&db_pool).await.expect("Erreur lors de l'initialisation des rôles");
     crate::api::repo::users::creer_table_si_inexistante(&db_pool).await;
+    crate::api::repo::comments::creer_table_si_inexistante(&db_pool).await;
 
     // 3. Création de l'état partagé (AppState)
     let state = Arc::new(AppState {
