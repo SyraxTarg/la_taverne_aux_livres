@@ -39,3 +39,10 @@ pub mod <nom du fichier du module>
 
 ducumentation de l'api google livres
 https://developers.google.com/books/docs/v1/using?hl=fr
+
+
+générer une clé secrete pour l'api (faut que ce soit la meme dans le front)
+openssl rand -hex 32
+
+
+En Rust, si tu mets un point-virgule à la fin de la dernière ligne d'une fonction, elle ne retourne rien (elle renvoie le type unité ()). Or, la signature de tes fonctions indique qu'elles doivent retourner un Result<user::Model, DbErr>.

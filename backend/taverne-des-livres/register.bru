@@ -1,0 +1,19 @@
+meta {
+  name: register
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://127.0.0.1:3000/api/auth/register
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "toto@mail.com",
+    "password": "ofkpf",
+    "role_id": 1
+  }
+}
