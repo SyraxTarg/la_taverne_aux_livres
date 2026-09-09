@@ -1,0 +1,135 @@
+---
+// src/components/Header.astro
+---
+
+<header class="navbar">
+  <div class="container nav-content">
+    <a href="/" class="brand">
+      <span class="brand-badge">📖</span>
+      <span class="brand-title">La Taverne aux Livres</span>
+    </a>
+
+    <!-- Formulaire natif : valider avec "Entrée" navigue vers /search?q=... -->
+    <form action="/search" method="GET" class="search-form" role="search">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input
+          type="search"
+          name="q"
+          placeholder="Rechercher un livre, un auteur..."
+          aria-label="Rechercher un livre"
+          autocomplete="off"
+        />
+      </div>
+    </form>
+
+    <nav class="nav-links">
+      <a href="/" class="nav-link">Bibliothèque</a>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .navbar {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+
+  .container {
+    max-width: 1020px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    width: 100%;
+  }
+
+  .nav-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    height: 64px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.05rem;
+    white-space: nowrap;
+  }
+
+  .brand-badge {
+    font-size: 1.2rem;
+  }
+
+  .search-form {
+    flex: 1;
+    max-width: 420px;
+  }
+
+  .search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 0.75rem;
+    font-size: 0.85rem;
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  .search-wrapper input {
+    width: 100%;
+    padding: 0.45rem 0.8rem 0.45rem 2.2rem;
+    font-size: 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+  }
+
+  .search-wrapper input:focus {
+    background-color: #ffffff;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+  }
+
+  .nav-link {
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: color 0.15s;
+    white-space: nowrap;
+  }
+
+  .nav-link:hover {
+    color: var(--text-primary);
+  }
+
+  @media (max-width: 640px) {
+    .nav-content {
+      gap: 0.75rem;
+    }
+    .brand-title {
+      display: none; /* Cache le titre sur mobile pour laisser de la place à la recherche */
+    }
+  }
+</style>

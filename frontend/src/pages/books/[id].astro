@@ -1,0 +1,276 @@
+---
+// src/pages/books/[id].astro
+import Layout from '../../layouts/Layout.astro';
+import Comments from '../../components/Comments.astro';
+import Rating from '../../components/Rating.astro';
+import { booksList, type ApiBook } from '../../data/books';
+
+// Génère statiquement les routes pour tous les livres connus
+export async function getStaticPaths() {
+  return booksList.map((book) => ({
+    params: { id: book.id },
+    props: { book }
+  }));
+}
+
+interface Props {
+  book: ApiBook;
+}
+
+const { book } = Astro.props;
+
+// Préparation des métadonnées
+const authorsLabel = book.authors && book.authors.length > 0
+  ? book.authors.map((a) => a.name).join(', ')
+  : 'Auteur inconnu';
+
+const year = book.published_date ? book.published_date.slice(0, 4) : 'Date inconnue';
+const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https://') : null;
+---
+
+<Layout pageTitle={`${book.title} — ${authorsLabel}`}>
+  <article class="book-card-detail">
+    <a href="/" class="back-btn">← Retour à la bibliothèque</a>
+
+    <div class="book-columns">
+      <!-- Colonne latérale : Couverture & Métadonnées -->
+      <aside class="sidebar">
+        <div class="cover-box">
+          {coverUrl ? (
+            <img src={coverUrl} alt={book.title} />
+          ) : (
+            <div class="no-cover">
+              <span class="no-cover-icon">📖</span>
+              <span class="no-cover-text">Sans illustration</span>
+            </div>
+          )}
+        </div>
+
+        <div class="meta-box">
+          <div class="meta-row">
+            <span>Auteur(s)</span>
+            <strong>{authorsLabel}</strong>
+          </div>
+
+          <div class="meta-row">
+            <span>Publication</span>
+            <strong>{year}</strong>
+          </div>
+
+          {book.page_count > 0 && (
+            <div class="meta-row">
+              <span>Pagination</span>
+              <strong>{book.page_count} pages</strong>
+            </div>
+          )}
+
+          <div class="meta-row">
+            <span>Note moyenne</span>
+            <strong>
+              {book.average_rating > 0 
+                ? `${book.average_rating} / 5 (${book.ratings_count} avis)`
+                : 'Non noté'}
+            </strong>
+          </div>
+
+          {book.maturity_rating && (
+            <div class="meta-row">
+              <span>Classification</span>
+              <strong>{book.maturity_rating === 'NOT_MATURE' ? 'Tout public' : book.maturity_rating}</strong>
+            </div>
+          )}
+
+          <!-- Composant interactif pour noter le livre -->
+          <div class="rating-action">
+            <Rating bookId={book.id} />
+          </div>
+        </div>
+      </aside>
+
+      <!-- Colonne principale : Titre, Catégories & Description -->
+      <section class="main-info">
+        <header class="header">
+          {book.categories && book.categories.length > 0 && (
+            <div class="categories-list">
+              {book.categories.map((c) => (
+                <span class="category-badge">{c.name}</span>
+              ))}
+            </div>
+          )}
+          <h1>{book.title}</h1>
+        </header>
+
+        <div class="section">
+          <h2>Présentation de l'ouvrage</h2>
+          {book.description ? (
+            <p class="description-text">{book.description}</p>
+          ) : (
+            <p class="empty-state">
+              Aucune description ou résumé n'a encore été renseigné pour ce volume dans la base de données.
+            </p>
+          )}
+        </div>
+      </section>
+    </div>
+
+    <!-- Section Commentaires -->
+    <Comments bookId={book.id} />
+  </article>
+</Layout>
+
+<style>
+  .book-card-detail {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  .back-btn {
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    margin-bottom: 2rem;
+    transition: color 0.15s ease;
+  }
+
+  .back-btn:hover {
+    color: var(--accent-color);
+  }
+
+  .book-columns {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 2.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .book-columns {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+
+  .cover-box {
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: #f1f5f9;
+    border: 1px solid var(--border-color);
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cover-box img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+  }
+
+  .no-cover {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    padding: 2rem;
+  }
+
+  .no-cover-icon {
+    font-size: 3rem;
+  }
+
+  .no-cover-text {
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .meta-box {
+    margin-top: 1.25rem;
+    background-color: var(--bg-page);
+    border-radius: 6px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    border: 1px solid var(--border-color);
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.85rem;
+  }
+
+  .meta-row span {
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .meta-row strong {
+    color: var(--text-primary);
+    text-align: right;
+    word-break: break-word;
+  }
+
+  .rating-action {
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--border-color);
+  }
+
+  .header h1 {
+    font-size: 1.85rem;
+    margin: 0.5rem 0 1.5rem 0;
+    line-height: 1.3;
+  }
+
+  .categories-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .category-badge {
+    background-color: var(--accent-light);
+    color: var(--accent-hover);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+  }
+
+  .section {
+    margin-bottom: 2rem;
+  }
+
+  .section h2 {
+    font-size: 1.2rem;
+    margin: 0 0 0.6rem 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.4rem;
+  }
+
+  .description-text {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin: 0;
+    white-space: pre-line;
+  }
+
+  .empty-state {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin: 0;
+  }
+</style>
