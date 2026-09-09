@@ -15,7 +15,6 @@ use crate::api::dto::responses::book::BookDto;
 use crate::api::dto::responses::search_books::{BookSearchResponse, PaginationDto};
 use crate::api::dto::responses::author::AuthorDto;
 use crate::api::dto::responses::categories::CategoryDto;
-use crate::api::middlewares::auth::RequireAuth;
 use crate::api::service::categories as categories_service;
 
 #[derive(Deserialize, IntoParams, ToSchema)]
@@ -40,7 +39,6 @@ pub struct ParametresRecherche {
     tag = "books"
 )]
 pub async fn get_books_by_recherche(
-    RequireAuth(_claims): RequireAuth,
     State(state): State<Arc<AppState>>,
     Query(params): Query<ParametresRecherche>,
 ) -> Result<Json<BookSearchResponse>, Json<Value>> {
@@ -190,7 +188,6 @@ pub async fn get_books_by_recherche(
     tag = "books"
 )]
 pub async fn get_book_by_id(
-    RequireAuth(_claims): RequireAuth,
     State(state): State<Arc<AppState>>,
     Path(book_id): Path<String>,
 ) -> Result<Json<BookDto>, Json<Value>> {
@@ -265,7 +262,6 @@ pub async fn get_book_by_id(
     tag = "books"
 )]
 pub async fn get_books_by_category_id(
-    RequireAuth(_claims): RequireAuth,
     State(state): State<Arc<AppState>>,
     Path(category_id): Path<i32>, // 👈 On récupère l'ID de l'URL
     Query(params): Query<ParametresRecherche>, // Pour gérer ?limit=10&offset=0
