@@ -1,11 +1,11 @@
 meta {
-  name: Create Comment
+  name: Update Comment
   type: http
-  seq: 7
+  seq: 10
 }
 
-post {
-  url: http://127.0.0.1:3000/api/comments
+put {
+  url: http://127.0.0.1:3000/api/comments/1
   body: json
   auth: bearer
 }
@@ -16,8 +16,7 @@ auth:bearer {
 
 body:json {
   {
-    "content": "lalalla",
-    "book_id": "tto",
-    "parent_id": 4
+    "content": "Commentaire mis à jour !"
   }
 }
+

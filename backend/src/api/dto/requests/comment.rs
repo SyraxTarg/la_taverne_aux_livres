@@ -7,3 +7,8 @@ pub struct CreateCommentDto {
     pub book_id: String,
     pub parent_id: Option<i32>,
 }
+
+#[derive(Deserialize, Clone, ToSchema)]
+pub struct UpdateCommentDto {
+    pub content: String,
+}

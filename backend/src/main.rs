@@ -19,7 +19,7 @@ use api::dto::responses::search_books::{BookSearchResponse, PaginationDto};
 use api::dto::responses::auth::{LoginResponseDto};
 use api::dto::responses::user::UserResponseDto;
 use api::dto::responses::comment::{CommentResponseDto, CommentWithRepliesDto};
-use api::dto::requests::comment::CreateCommentDto;
+use api::dto::requests::comment::{CreateCommentDto, UpdateCommentDto};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -29,10 +29,14 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::api::controller::books::get_books_by_recherche,
         crate::api::controller::books::get_book_by_id,
         crate::api::controller::books::get_books_by_category_id,
+        crate::api::controller::books::get_comments_by_book,
         crate::api::controller::auth::login,
         crate::api::controller::auth::register,
         crate::api::controller::users::get_me,
-        crate::api::controller::comments::create_comment
+        crate::api::controller::comments::create_comment,
+        crate::api::controller::comments::get_comment_by_id,
+        crate::api::controller::comments::update_comment,
+        crate::api::controller::comments::delete_comment
     ),
     components(
         schemas(
@@ -47,6 +51,7 @@ use utoipa_swagger_ui::SwaggerUi;
             UserResponseDto,
             CommentResponseDto,
             CreateCommentDto,
+            UpdateCommentDto,
             CommentWithRepliesDto
         )
     ),
@@ -54,7 +59,7 @@ use utoipa_swagger_ui::SwaggerUi;
         (name = "books", description = "Gestion du catalogue et recherche de livres"),
         (name = "auth", description = "Gestion de l'authentification"),
         (name = "utilisateurs", description = "Gestion des utilisateurs"),
-        (name = "Commentaires", description = "Gestion des commentaires"),
+        (name = "comments", description = "Gestion des commentaires"),
     )
 )]
 struct ApiDoc;
