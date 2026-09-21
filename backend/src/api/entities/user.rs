@@ -8,7 +8,7 @@ pub struct Model {
     #[sea_orm(unique)]
     pub email: String,
     pub password: String,
-    pub role_id: i32, // 👈 Lien vers le rôle
+    pub role_id: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -21,11 +21,20 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     Role,
+
+    #[sea_orm(has_many = "super::user_reading::Entity")]
+    UserReadBooks,
 }
 
 impl Related<super::role::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Role.def()
+    }
+}
+
+impl Related<super::user_reading::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::UserReadBooks.def()
     }
 }
 

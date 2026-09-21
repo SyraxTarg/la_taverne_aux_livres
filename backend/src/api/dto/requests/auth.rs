@@ -21,7 +21,6 @@ pub struct RegisterDto {
     )]
     pub email: String,
     pub password: String,
-    pub role_id: i32,
 }
 
 
