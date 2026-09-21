@@ -1,12 +1,12 @@
 meta {
-  name: Create Comment
+  name: Delete Comment
   type: http
-  seq: 7
+  seq: 11
 }
 
-post {
-  url: http://127.0.0.1:3000/api/comments
-  body: json
+delete {
+  url: http://127.0.0.1:3000/api/comments/1
+  body: none
   auth: bearer
 }
 
@@ -14,10 +14,3 @@ auth:bearer {
   token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0b3RvQG1haWwuY29tIiwiaWQiOjEsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc4OTA0ODA2NX0.JI14wvu3o48PQYuQcOvB5SXGF74Wez0n-GZp3lCN9OE
 }
 
-body:json {
-  {
-    "content": "lalalla",
-    "book_id": "tto",
-    "parent_id": 4
-  }
-}
