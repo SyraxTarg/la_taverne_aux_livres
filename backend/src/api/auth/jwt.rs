@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 pub struct Claims {
     pub sub: String,  // Email ou ID de l'utilisateur
     pub id: i32,
-    pub role: String, // ex: "admin" ou "viewer"
+    pub role: String, // ex: "admin" ou "user"
     pub exp: usize,   // Date d'expiration
 }
 

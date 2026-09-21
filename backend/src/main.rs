@@ -1,25 +1,28 @@
 pub mod api;
 pub mod proxy;
 
-use axum::Router;
-use reqwest::Client;
-use std::env;
-use std::sync::Arc;
-use dotenv::dotenv;
-use api::router::books::books_router;
-use api::router::auth::auth_router;
-use api::router::user::user_router;
-use api::router::comments::comments_router;
-use sea_orm::DatabaseConnection;
+use api::dto::requests::auth::{LoginDto, RegisterDto};
+use api::dto::requests::comment::{CreateCommentDto, UpdateCommentDto};
+use api::dto::requests::user_reading::UserReadingDto;
+use api::dto::responses::auth::LoginResponseDto;
 use api::dto::responses::author::AuthorDto;
 use api::dto::responses::book::BookDto;
 use api::dto::responses::categories::CategoryDto;
-use api::dto::requests::auth::{LoginDto, RegisterDto};
-use api::dto::responses::search_books::{BookSearchResponse, PaginationDto};
-use api::dto::responses::auth::{LoginResponseDto};
-use api::dto::responses::user::UserResponseDto;
 use api::dto::responses::comment::{CommentResponseDto, CommentWithRepliesDto};
-use api::dto::requests::comment::{CreateCommentDto, UpdateCommentDto};
+use api::dto::responses::search_books::{BookSearchResponse, PaginationDto};
+use api::dto::responses::user::UserResponseDto;
+use api::dto::responses::user_reading::UserReadingResponseDto;
+use api::router::auth::auth_router;
+use api::router::books::books_router;
+use api::router::comments::comments_router;
+use api::router::user::user_router;
+use api::router::user_reading::user_reading_router;
+use axum::Router;
+use dotenv::dotenv;
+use reqwest::Client;
+use sea_orm::DatabaseConnection;
+use std::env;
+use std::sync::Arc;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -36,7 +39,10 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::api::controller::comments::create_comment,
         crate::api::controller::comments::get_comment_by_id,
         crate::api::controller::comments::update_comment,
-        crate::api::controller::comments::delete_comment
+        crate::api::controller::comments::delete_comment,
+        crate::api::controller::user_readings::create_reading,
+        crate::api::controller::user_readings::get_readings_by_user_id,
+        crate::api::controller::user_readings::delete_reading,
     ),
     components(
         schemas(
@@ -52,7 +58,9 @@ use utoipa_swagger_ui::SwaggerUi;
             CommentResponseDto,
             CreateCommentDto,
             UpdateCommentDto,
-            CommentWithRepliesDto
+            CommentWithRepliesDto,
+            UserReadingDto,
+            UserReadingResponseDto
         )
     ),
     tags(
@@ -60,6 +68,7 @@ use utoipa_swagger_ui::SwaggerUi;
         (name = "auth", description = "Gestion de l'authentification"),
         (name = "utilisateurs", description = "Gestion des utilisateurs"),
         (name = "comments", description = "Gestion des commentaires"),
+        (name = "lectures", description = "Gestion des lectures"),
     )
 )]
 struct ApiDoc;
@@ -89,9 +98,12 @@ async fn main() {
 
     // 👇 Appel de l'initialisation de la table au démarrage
     crate::api::repo::categories::creer_table_si_inexistante(&db_pool).await;
-    crate::api::repo::roles::creer_table_et_roles_base(&db_pool).await.expect("Erreur lors de l'initialisation des rôles");
+    crate::api::repo::roles::creer_table_et_roles_base(&db_pool)
+        .await
+        .expect("Erreur lors de l'initialisation des rôles");
     crate::api::repo::users::creer_table_si_inexistante(&db_pool).await;
     crate::api::repo::comments::creer_table_si_inexistante(&db_pool).await;
+    crate::api::repo::user_reading::creer_table_si_inexistante(&db_pool).await;
 
     // 3. Création de l'état partagé (AppState)
     let state = Arc::new(AppState {
@@ -108,10 +120,13 @@ async fn main() {
         .nest("/api/auth", auth_router())
         .nest("/api/users", user_router())
         .nest("/api/comments", comments_router())
+        .nest("/api/readings", user_reading_router())
         .with_state(state);
 
     // 5. Démarrage du serveur
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+        .await
+        .unwrap();
     println!("🚀 Serveur démarré sur http://127.0.0.1:3000");
     axum::serve(listener, app).await.unwrap();
 }

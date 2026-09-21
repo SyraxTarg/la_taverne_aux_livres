@@ -7,6 +7,7 @@ use crate::api::dto::responses::auth::LoginResponseDto;
 use crate::api::auth::jwt::{hash_password, verify_password, create_jwt};
 use validator::Validate;
 use crate::api::service::users as service;
+use crate::api::service::roles as roles_service;
 
 #[utoipa::path(
     post,
@@ -30,17 +31,23 @@ pub async fn register(
         })));
     }
 
-
     let hashed_password = match hash_password(&body.password) {
         Ok(h) => h,
         Err(_) => return Err(Json(json!({ "erreur": "Erreur lors du hachage du mot de passe" }))),
     };
 
-    match service::create_user(&state.db_pool, body.email, hashed_password, body.role_id).await {
+    let role = match roles_service::find_role_by_role_name(&state.db_pool, "user").await {
+        Ok(Some(r)) => r,
+        Ok(None) => return Err(Json(json!({ "erreur": "Rôle utilisateur par défaut introuvable" }))),
+        Err(_) => return Err(Json(json!({ "erreur": "Erreur de base de données lors de la récupération du rôle" }))),
+    };
+
+    match service::create_user(&state.db_pool, body.email, hashed_password, role.id).await {
         Ok(_) => Ok(Json(json!({ "message": "Utilisateur créé avec succès !" }))),
         Err(e) => Err(Json(json!({ "erreur": format!("Impossible de créer l'utilisateur : {}", e) }))),
     }
 }
+
 
 #[utoipa::path(
     post,

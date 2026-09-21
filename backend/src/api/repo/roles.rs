@@ -12,8 +12,8 @@ pub async fn creer_table_et_roles_base(db: &DatabaseConnection) -> Result<(), Db
     db.execute(&stmt).await?;
     println!("✅ Table 'roles' vérifiée via l'ORM.");
 
-    // Insérer les rôles de base (admin, viewer) s'ils n'existent pas déjà
-    let roles_de_base = vec!["admin", "viewer"];
+    // Insérer les rôles de base (admin, user) s'ils n'existent pas déjà
+    let roles_de_base = vec!["admin", "user"];
 
     for nom_role in roles_de_base {
         let existe = role::Entity::find()

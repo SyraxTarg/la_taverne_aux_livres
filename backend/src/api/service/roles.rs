@@ -14,3 +14,10 @@ pub async fn find_role_by_user_email(
 ) -> Result<Option<role::Model>, DbErr> {
     repo::find_role_by_user_email(db, email).await
 }
+
+pub async fn find_role_by_role_name(
+    db: &DatabaseConnection,
+    role_name: &str,
+) -> Result<Option<role::Model>, DbErr> {
+    repo::find_by_role_name(db, role_name).await
+}
