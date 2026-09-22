@@ -5,7 +5,7 @@ meta {
 }
 
 put {
-  url: http://127.0.0.1:3000/api/comments/1
+  url: {{host}}/api/comments/1
   body: json
   auth: bearer
 }
@@ -19,4 +19,3 @@ body:json {
     "content": "Commentaire mis à jour !"
   }
 }
-

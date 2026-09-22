@@ -9,3 +9,28 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: tavern
       POSTGRES_PASSWORD: root
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: dockerfile
+    container_name: backend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:root@postgres:5432/tavern
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "4321:4321"
+    environment:
+      - HOST=0.0.0.0
+      - API_URL=http://backend:3000/api
+    depends_on:
+      - backend
