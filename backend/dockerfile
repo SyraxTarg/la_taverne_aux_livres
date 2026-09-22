@@ -1,0 +1,60 @@
+# ==========================================
+# Étape 1 : Construction (Builder)
+# ==========================================
+FROM rust:1-slim-bookworm AS builder
+
+WORKDIR /app
+
+# Dépendances nécessaires à la compilation (OpenSSL, curl pour télécharger Swagger UI, etc.)
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Mise en cache des dépendances Cargo
+COPY Cargo.toml Cargo.lock ./
+
+# Projet factice pour compiler et mettre en cache uniquement les dépendances
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+RUN cargo build --release
+RUN rm -rf src
+
+# Copie des véritables sources
+COPY src ./src
+
+# Mise à jour du timestamp pour forcer cargo à recompiler le binaire avec le vrai code
+RUN touch src/main.rs && cargo build --release
+
+# ==========================================
+# Étape 2 : Image finale d'exécution (Runtime)
+# ==========================================
+FROM debian:bookworm-slim AS runner
+
+WORKDIR /app
+
+# Installation des certificats CA (indispensables pour les requêtes HTTPS vers Google Books)
+# et de libssl pour l'exécution
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Sécurité : exécution avec un utilisateur non-root
+RUN useradd -m -u 1001 appuser
+USER appuser
+
+# Copie du binaire compilé depuis le builder
+COPY --from=builder /app/target/release/backend /app/backend
+
+# Variables d'environnement par défaut
+ENV HOST=0.0.0.0
+ENV PORT=3000
+
+# Port exposé
+EXPOSE 3000
+
+# Commande de lancement
+CMD ["/app/backend"]
+

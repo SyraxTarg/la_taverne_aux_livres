@@ -124,9 +124,11 @@ async fn main() {
         .with_state(state);
 
     // 5. Démarrage du serveur
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
-    println!("🚀 Serveur démarré sur http://127.0.0.1:3000");
+    let host = env::var("HOST").unwrap();
+    let port = env::var("PORT").unwrap();
+    let addr = format!("{}:{}", host, port);
+
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    println!("🚀 Serveur démarré sur http://{}", addr);
     axum::serve(listener, app).await.unwrap();
 }
