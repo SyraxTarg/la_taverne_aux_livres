@@ -3,15 +3,20 @@
 interface Props {
   bookId: string;
   initialRating?: number;
+  isAuthenticated?: boolean;
 }
 
-const { bookId, initialRating } = Astro.props;
+const { bookId, initialRating, isAuthenticated = false } = Astro.props;
 ---
 
-<section class="rating-widget" data-book-id={bookId}>
+<section class="rating-widget" data-book-id={bookId} data-authenticated={isAuthenticated ? "true" : "false"}>
   <div class="rating-header">
     <h3>Votre note</h3>
-    <p>Donnez une note de 1 à 5 étoiles à cette lecture.</p>
+    <p>
+      {isAuthenticated 
+        ? "Donnez une note de 1 à 5 étoiles à cette lecture." 
+        : "Connectez-vous pour noter cette lecture."}
+    </p>
   </div>
 
   <div class="stars-group" role="radiogroup" aria-label="Noter ce livre">
@@ -31,114 +36,160 @@ const { bookId, initialRating } = Astro.props;
 
   <div class="rating-footer">
     <span class="rating-score" id="score-text">
-      {initialRating ? `Votre note : ${initialRating}/5` : "Pas encore de note"}
+      {initialRating ? `Votre note : ${initialRating}/5` : (isAuthenticated ? "Pas encore de note" : "Connexion requise")}
     </span>
+    {!isAuthenticated && (
+      <p class="login-prompt">
+        <a href="/login">Se connecter</a> pour enregistrer une note.
+      </p>
+    )}
     <span class="rating-feedback hidden" id="rating-feedback"></span>
   </div>
 </section>
 
 <script>
-  // Simulation de l'appel API (POST /api/ratings)
-  async function submitRatingMock(payload: { bookId: string; rating: number }) {
-    await new Promise((resolve) => setTimeout(resolve, 400));
+  // Appel à la route PUT /api/readings
+  async function submitRating(payload: { bookId: string; rating: number }) {
+    const requestBody = {
+      book_id: String(payload.bookId),
+      note: Number(payload.rating),
+    };
 
-    if (payload.rating < 1 || payload.rating > 5) {
-      throw new Error("La note doit être comprise entre 1 et 5.");
+    console.log('[Rating] Envoi de la requête PUT /api/readings avec le body :', requestBody);
+
+    const response = await fetch('/api/readings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    let data: any;
+    try {
+      data = await response.json();
+    } catch {
+      data = { erreur: `Erreur serveur (${response.status})` };
+    }
+
+    console.log('[Rating] Réponse reçue de PUT /api/readings :', response.status, data);
+
+    if (!response.ok) {
+      throw new Error(data.erreur || data.message || "Erreur lors de l'enregistrement de la note.");
     }
 
     return {
       success: true,
-      data: {
-        bookId: payload.bookId,
-        rating: payload.rating,
-        savedAt: new Date().toISOString()
-      }
+      data,
     };
   }
 
-  // Initialisation du widget
-  const widgets = document.querySelectorAll<HTMLElement>(".rating-widget");
+  function initRatingWidgets() {
+    const widgets = document.querySelectorAll<HTMLElement>(".rating-widget");
 
-  widgets.forEach((widget) => {
-    const bookId = widget.dataset.bookId || "";
-    const stars = widget.querySelectorAll<HTMLButtonElement>(".star-btn");
-    const scoreText = widget.querySelector<HTMLSpanElement>("#score-text");
-    const feedback = widget.querySelector<HTMLSpanElement>("#rating-feedback");
+    widgets.forEach((widget) => {
+      const isAuth = widget.dataset.authenticated === "true";
+      const bookId = widget.dataset.bookId || widget.getAttribute("data-book-id") || "";
+      const stars = widget.querySelectorAll<HTMLButtonElement>(".star-btn");
+      const scoreText = widget.querySelector<HTMLSpanElement>("#score-text");
+      const feedback = widget.querySelector<HTMLSpanElement>("#rating-feedback");
 
-    let currentRating = 0;
-    let isSubmitting = false;
-
-    const highlightStars = (count: number) => {
-      stars.forEach((star) => {
-        const value = Number(star.dataset.rating);
-        star.classList.toggle("hovered", value <= count);
-      });
-    };
-
-    const resetStarStyles = () => {
-      stars.forEach((star) => {
-        star.classList.remove("hovered");
-        const value = Number(star.dataset.rating);
-        star.classList.toggle("is-active", value <= currentRating);
-      });
-    };
-
-    stars.forEach((star) => {
-      // Effet de prévisualisation au survol
-      star.addEventListener("mouseenter", () => {
-        if (!isSubmitting) {
-          const val = Number(star.dataset.rating);
-          highlightStars(val);
-        }
-      });
-
-      // Envoi de la note au clic
-      star.addEventListener("click", async () => {
-        if (isSubmitting) return;
-
-        const selectedRating = Number(star.dataset.rating);
-        isSubmitting = true;
-        stars.forEach((btn) => (btn.disabled = true));
-
-        if (feedback) {
-          feedback.textContent = "Enregistrement...";
-          feedback.className = "rating-feedback pending";
-        }
-
-        try {
-          const res = await submitRatingMock({ bookId, rating: selectedRating });
-
-          if (res.success) {
-            currentRating = res.data.rating;
-            resetStarStyles();
-
-            if (scoreText) {
-              scoreText.textContent = `Votre note : ${currentRating}/5`;
-            }
-
-            if (feedback) {
-              feedback.textContent = "Note enregistrée !";
-              feedback.className = "rating-feedback success";
-            }
-          }
-        } catch (err: any) {
-          if (feedback) {
-            feedback.textContent = err.message || "Erreur lors de l'enregistrement.";
-            feedback.className = "rating-feedback error";
-          }
-        } finally {
-          isSubmitting = false;
-          stars.forEach((btn) => (btn.disabled = false));
-        }
-      });
-    });
-
-    widget.addEventListener("mouseleave", () => {
-      if (!isSubmitting) {
-        resetStarStyles();
+      let currentRating = 0;
+      // Détecter la note initiale active
+      const activeStars = widget.querySelectorAll<HTMLButtonElement>(".star-btn.is-active");
+      if (activeStars.length > 0) {
+        currentRating = Number(activeStars[activeStars.length - 1].dataset.rating) || 0;
       }
+
+      let isSubmitting = false;
+
+      const highlightStars = (count: number) => {
+        stars.forEach((star) => {
+          const value = Number(star.dataset.rating);
+          star.classList.toggle("hovered", value <= count);
+        });
+      };
+
+      const resetStarStyles = () => {
+        stars.forEach((star) => {
+          star.classList.remove("hovered");
+          const value = Number(star.dataset.rating);
+          star.classList.toggle("is-active", value <= currentRating);
+        });
+      };
+
+      stars.forEach((star) => {
+        // Effet de prévisualisation au survol
+        star.addEventListener("mouseenter", () => {
+          if (!isSubmitting) {
+            const val = Number(star.dataset.rating);
+            highlightStars(val);
+          }
+        });
+
+        // Envoi de la note au clic
+        star.addEventListener("click", async () => {
+          if (isSubmitting) return;
+
+          const selectedRating = parseInt(star.dataset.rating || "0", 10);
+
+          if (!isAuth) {
+            if (feedback) {
+              feedback.textContent = "Vous devez être connecté pour noter un livre.";
+              feedback.className = "rating-feedback error";
+            }
+            return;
+          }
+
+          isSubmitting = true;
+          stars.forEach((btn) => (btn.disabled = true));
+
+          if (feedback) {
+            feedback.textContent = "Enregistrement...";
+            feedback.className = "rating-feedback pending";
+          }
+
+          try {
+            const res = await submitRating({ bookId, rating: selectedRating });
+
+            if (res.success) {
+              currentRating = selectedRating;
+              resetStarStyles();
+
+              if (scoreText) {
+                scoreText.textContent = `Votre note : ${currentRating}/5`;
+              }
+
+              if (feedback) {
+                feedback.textContent = "Note enregistrée !";
+                feedback.className = "rating-feedback success";
+              }
+            }
+          } catch (err: any) {
+            if (feedback) {
+              feedback.textContent = err.message || "Erreur lors de l'enregistrement.";
+              feedback.className = "rating-feedback error";
+            }
+          } finally {
+            isSubmitting = false;
+            stars.forEach((btn) => (btn.disabled = false));
+          }
+        });
+      });
+
+      widget.addEventListener("mouseleave", () => {
+        if (!isSubmitting) {
+          resetStarStyles();
+        }
+      });
     });
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initRatingWidgets);
+  } else {
+    initRatingWidgets();
+  }
 </script>
 
 <style>
@@ -220,5 +271,16 @@ const { bookId, initialRating } = Astro.props;
   @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+  }
+
+  .login-prompt {
+    font-size: 0.8rem;
+    margin: 0.25rem 0 0 0;
+    color: var(--text-muted);
+  }
+
+  .login-prompt a {
+    color: #2563eb;
+    text-decoration: underline;
   }
 </style>

@@ -40,6 +40,14 @@ export interface Comment {
   content: string;
 }
 
+export interface UserReading {
+  id: number;
+  user_id: number;
+  book_id: string;
+  note: number | null;
+  read_at: string;
+}
+
 export interface ApiComment {
   id: number;
   content: string;

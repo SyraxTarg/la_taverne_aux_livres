@@ -3,7 +3,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Comments from '../../components/Comments.astro';
 import Rating from '../../components/Rating.astro';
-import type { ApiBook } from '../../data/books';
+import type { ApiBook, UserReading } from '../../data/books';
 import { API_URL } from 'astro:env/server';
 
 export const prerender = false;
@@ -24,6 +24,48 @@ try {
 }
 
 if (!book) return Astro.redirect('/404');
+
+const token = Astro.cookies.get('auth_token')?.value;
+const isAuthenticated = !!token;
+let userRating: number | undefined = undefined;
+
+if (isAuthenticated && token) {
+  try {
+    const baseApi = API_URL.replace(/\/+$/, '');
+    const userEndpoint = baseApi.endsWith('/api')
+      ? `${baseApi}/users/me`
+      : `${baseApi}/api/users/me`;
+
+    const userRes = await fetch(userEndpoint, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (userRes.ok) {
+      const userData = await userRes.json();
+      const readingsEndpoint = baseApi.endsWith('/api')
+        ? `${baseApi}/users/${userData.id}/readings`
+        : `${baseApi}/api/users/${userData.id}/readings`;
+
+      const readingsRes = await fetch(readingsEndpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (readingsRes.ok) {
+        const readings: UserReading[] = await readingsRes.json();
+        const existingReading = readings.find((r) => r.book_id === id);
+        if (existingReading && typeof existingReading.note === 'number') {
+          userRating = existingReading.note;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Erreur lors de la récupération de la note utilisateur :', err);
+  }
+}
 
 const authorsLabel = book.authors?.length ? book.authors.map(a => a.name).join(', ') : 'Auteur inconnu';
 const year = book.published_date ? book.published_date.slice(0, 4) : 'Date inconnue';
@@ -82,7 +124,11 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
           )}
 
           <div class="rating-action">
-            <Rating bookId={book.id} />
+            <Rating
+              bookId={book.id}
+              initialRating={userRating}
+              isAuthenticated={isAuthenticated}
+            />
           </div>
         </div>
       </aside>

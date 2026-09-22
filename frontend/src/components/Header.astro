@@ -28,9 +28,12 @@ const isAuthenticated = Astro.cookies.has('auth_token');
       <a href="/" class="nav-link">Bibliothèque</a>
 
       {isAuthenticated ? (
-        <form action="/logout" method="POST" class="logout-form">
-          <button type="submit" class="btn-link">Déconnexion</button>
-        </form>
+        <>
+          <a href="/profile" class="nav-link">Profil</a>
+          <form action="/logout" method="POST" class="logout-form">
+            <button type="submit" class="btn-link">Déconnexion</button>
+          </form>
+        </>
       ) : (
         <a href="/login" class="nav-link auth-btn">Connexion</a>
       )}
