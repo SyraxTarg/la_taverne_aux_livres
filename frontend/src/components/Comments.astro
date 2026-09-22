@@ -1,34 +1,102 @@
 ---
 // src/components/Comments.astro
-import { commentsByBookId } from '../data/books';
+import type { ApiCommentWithReplies } from '../data/books';
+import { API_URL } from 'astro:env/server';
 
 interface Props {
   bookId: string;
 }
 
 const { bookId } = Astro.props;
-const comments = commentsByBookId[bookId] ?? [];
+const token = Astro.cookies.get('auth_token')?.value;
+const isAuthenticated = !!token;
+
+let currentUserId: number | null = null;
+let currentUserEmail: string | null = null;
+
+if (token) {
+  try {
+    const userEndpoint = API_URL.endsWith('/api')
+      ? `${API_URL}/users/me`
+      : `${API_URL}/api/users/me`;
+    const userRes = await fetch(userEndpoint, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (userRes.ok) {
+      const userData = await userRes.json();
+      currentUserId = userData.id;
+      currentUserEmail = userData.email;
+    }
+  } catch (err) {
+    console.error("Erreur récupération utilisateur connecté :", err);
+  }
+}
+
+let comments: ApiCommentWithReplies[] = [];
+
+try {
+  const baseUrl = API_URL.endsWith('/api') ? API_URL : `${API_URL}/api`;
+  const response = await fetch(`${baseUrl}/books/${bookId}/comments`);
+  if (response.ok) {
+    comments = await response.json();
+  }
+} catch (error) {
+  console.error("Erreur lors de la récupération des commentaires :", error);
+}
+
+const totalComments = comments.reduce((acc, c) => acc + 1 + (c.reponses?.length || 0), 0);
+
+function formatDate(dateStr: string) {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return dateStr;
+  }
+}
 ---
 
-<section class="comments-block" data-book-id={bookId}>
+<section
+  class="comments-block"
+  data-book-id={bookId}
+  data-authenticated={isAuthenticated ? "true" : "false"}
+  data-current-user-id={currentUserId ?? ""}
+>
   <div class="block-header">
-    <h2>Commentaires ({comments.length})</h2>
-    <p>Partagez votre avis de lecture.</p>
+    <h2>Commentaires (<span id="comments-count">{totalComments}</span>)</h2>
+    <p>Partagez votre avis de lecture et échangez avec les autres lecteurs.</p>
   </div>
 
   <form id="comment-form" class="comment-form">
     <div class="field">
-      <label for="author-input">Nom ou pseudo</label>
-      <input type="text" id="author-input" name="author" placeholder="Votre nom" required />
-    </div>
-
-    <div class="field">
       <label for="content-input">Votre commentaire</label>
-      <textarea id="content-input" name="content" rows="3" placeholder="Donnez vos impressions sur ce livre..." required></textarea>
+      <textarea
+        id="content-input"
+        name="content"
+        rows="3"
+        placeholder={isAuthenticated ? "Donnez vos impressions sur ce livre..." : "Connectez-vous pour laisser un commentaire..."}
+        required
+        disabled={!isAuthenticated}
+      ></textarea>
     </div>
 
     <div class="form-actions">
-      <button type="submit" id="submit-btn">Envoyer mon commentaire</button>
+      <button type="submit" id="submit-btn" disabled={!isAuthenticated}>
+        Envoyer mon commentaire
+      </button>
+      {!isAuthenticated && (
+        <a href="/login" class="login-hint">Connexion requise pour commenter</a>
+      )}
       <span id="status-message" class="status-box hidden"></span>
     </div>
   </form>
@@ -39,85 +107,601 @@ const comments = commentsByBookId[bookId] ?? [];
         Aucun commentaire pour le moment. Soyez le premier à donner votre avis !
       </p>
     ) : (
-      comments.map((item) => (
-        <article class="comment-card">
-          <div class="comment-top">
-            <strong>{item.author}</strong>
-            <time>{item.date}</time>
+      comments.map((item) => {
+        const isOwner = currentUserId !== null && item.user_id === currentUserId;
+        return (
+          <div class="comment-thread" data-thread-id={item.id}>
+            <article class="comment-card level-1" data-comment-id={item.id} data-user-id={item.user_id}>
+              <div class="comment-top">
+                <div class="author-badge">
+                  <span class="avatar-icon">👤</span>
+                  <strong>{isOwner ? "Vous" : `Lecteur #${item.user_id}`}</strong>
+                </div>
+                <div class="comment-top-right">
+                  <time datetime={item.created_at}>{formatDate(item.created_at)}</time>
+                  {isOwner && (
+                    <div class="comment-menu-wrapper">
+                      <button
+                        type="button"
+                        class="comment-menu-btn"
+                        aria-label="Options du commentaire"
+                        title="Options"
+                      >
+                        ⋯
+                      </button>
+                      <div class="comment-menu-dropdown hidden">
+                        <button type="button" class="menu-item action-edit">
+                          ✏️ Modifier
+                        </button>
+                        <button type="button" class="menu-item action-delete">
+                          🗑️ Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p class="comment-body">{item.content}</p>
+
+              <div class="comment-actions">
+                <button
+                  type="button"
+                  class="reply-trigger-btn"
+                  data-parent-id={item.id}
+                  title="Répondre à ce commentaire"
+                >
+                  <span class="reply-icon">↩</span> Répondre
+                </button>
+              </div>
+
+              <form class="reply-form hidden" data-parent-id={item.id}>
+                <div class="field">
+                  <textarea
+                    class="reply-input"
+                    name="content"
+                    rows="2"
+                    placeholder={isAuthenticated ? "Écrivez votre réponse..." : "Connectez-vous pour répondre..."}
+                    required
+                    disabled={!isAuthenticated}
+                  ></textarea>
+                </div>
+                <div class="reply-actions">
+                  <button type="submit" class="reply-submit-btn" disabled={!isAuthenticated}>
+                    Envoyer la réponse
+                  </button>
+                  <button type="button" class="reply-cancel-btn">
+                    Annuler
+                  </button>
+                  {!isAuthenticated && (
+                    <a href="/login" class="login-hint">Connexion requise</a>
+                  )}
+                  <span class="reply-status-msg status-box hidden"></span>
+                </div>
+              </form>
+            </article>
+
+            <div class="replies-list" data-parent-id={item.id}>
+              {item.reponses && item.reponses.length > 0 && item.reponses.map((rep) => {
+                const isRepOwner = currentUserId !== null && rep.user_id === currentUserId;
+                return (
+                  <article class="comment-card level-2" data-comment-id={rep.id} data-user-id={rep.user_id}>
+                    <div class="comment-top">
+                      <div class="author-badge">
+                        <span class="reply-tag">↳ Réponse</span>
+                        <strong>{isRepOwner ? "Vous" : `Lecteur #${rep.user_id}`}</strong>
+                      </div>
+                      <div class="comment-top-right">
+                        <time datetime={rep.created_at}>{formatDate(rep.created_at)}</time>
+                        {isRepOwner && (
+                          <div class="comment-menu-wrapper">
+                            <button
+                              type="button"
+                              class="comment-menu-btn"
+                              aria-label="Options de la réponse"
+                              title="Options"
+                            >
+                              ⋯
+                            </button>
+                            <div class="comment-menu-dropdown hidden">
+                              <button type="button" class="menu-item action-edit">
+                                ✏️ Modifier
+                              </button>
+                              <button type="button" class="menu-item action-delete">
+                                🗑️ Supprimer
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <p class="comment-body">{rep.content}</p>
+                  </article>
+                );
+              })}
+            </div>
           </div>
-          <p class="comment-body">{item.content}</p>
-        </article>
-      ))
+        );
+      })
     )}
   </div>
 </section>
 
 <script>
+  function escapeHtml(text: string): string {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function updateCommentsCount(delta: number) {
+    const countEl = document.getElementById("comments-count");
+    if (countEl) {
+      const current = parseInt(countEl.textContent || "0", 10) || 0;
+      countEl.textContent = String(Math.max(0, current + delta));
+    }
+  }
+
+  const container = document.querySelector(".comments-block") as HTMLElement;
+  const bookId = container?.dataset.bookId || "";
+  const isAuthenticated = container?.dataset.authenticated === "true";
+  const currentUserId = container?.dataset.currentUserId ? Number(container.dataset.currentUserId) : null;
+
   const form = document.getElementById("comment-form") as HTMLFormElement;
   const list = document.getElementById("comments-list") as HTMLDivElement;
   const submitBtn = document.getElementById("submit-btn") as HTMLButtonElement;
   const statusMsg = document.getElementById("status-message") as HTMLSpanElement;
-  const emptyState = document.getElementById("empty-state");
+  const contentInput = document.getElementById("content-input") as HTMLTextAreaElement;
 
-  async function sendCommentMock(payload: { bookId: string; author: string; content: string }) {
-    await new Promise((resolve) => setTimeout(resolve, 450));
-
-    if (!payload.content || payload.content.trim().length < 3) {
-      throw new Error("Votre commentaire est trop court.");
+  // Fermer les menus d'options au clic en dehors
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest(".comment-menu-wrapper")) {
+      document.querySelectorAll(".comment-menu-dropdown:not(.hidden)").forEach((d) => {
+        d.classList.add("hidden");
+      });
     }
+  });
 
-    return {
-      success: true,
-      data: {
-        author: payload.author,
-        content: payload.content,
-        date: new Date().toLocaleDateString("fr-FR")
+  // Attache la gestion du menu d'options (modifier / supprimer) sur une carte de commentaire
+  function attachMenuListeners(cardEl: HTMLElement) {
+    const menuBtn = cardEl.querySelector(".comment-menu-btn") as HTMLButtonElement;
+    const menuDropdown = cardEl.querySelector(".comment-menu-dropdown") as HTMLElement;
+    const editBtn = cardEl.querySelector(".action-edit") as HTMLButtonElement;
+    const deleteBtn = cardEl.querySelector(".action-delete") as HTMLButtonElement;
+
+    if (!menuBtn || !menuDropdown) return;
+
+    menuBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isCurrentlyHidden = menuDropdown.classList.contains("hidden");
+      // Fermer tous les autres menus d'abord
+      document.querySelectorAll(".comment-menu-dropdown:not(.hidden)").forEach((d) => {
+        d.classList.add("hidden");
+      });
+      if (isCurrentlyHidden) {
+        menuDropdown.classList.remove("hidden");
       }
-    };
+    });
+
+    // Action Modifier
+    editBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      menuDropdown.classList.add("hidden");
+
+      const commentId = cardEl.dataset.commentId;
+      if (!commentId) return;
+
+      const bodyEl = cardEl.querySelector(".comment-body") as HTMLElement;
+      if (!bodyEl || cardEl.querySelector(".comment-edit-box")) return;
+
+      const originalText = bodyEl.textContent || "";
+      bodyEl.style.display = "none";
+
+      const editBox = document.createElement("div");
+      editBox.className = "comment-edit-box";
+      editBox.innerHTML = `
+        <textarea class="edit-textarea" rows="2" required></textarea>
+        <div class="edit-actions">
+          <button type="button" class="edit-save-btn">Enregistrer</button>
+          <button type="button" class="edit-cancel-btn">Annuler</button>
+          <span class="edit-status-msg status-box hidden"></span>
+        </div>
+      `;
+
+      const editTextarea = editBox.querySelector(".edit-textarea") as HTMLTextAreaElement;
+      editTextarea.value = originalText;
+      bodyEl.after(editBox);
+      editTextarea.focus();
+
+      const saveBtn = editBox.querySelector(".edit-save-btn") as HTMLButtonElement;
+      const cancelBtn = editBox.querySelector(".edit-cancel-btn") as HTMLButtonElement;
+      const editStatus = editBox.querySelector(".edit-status-msg") as HTMLSpanElement;
+
+      cancelBtn.addEventListener("click", () => {
+        editBox.remove();
+        bodyEl.style.display = "";
+      });
+
+      saveBtn.addEventListener("click", async () => {
+        const newText = editTextarea.value.trim();
+        if (!newText) {
+          editStatus.textContent = "Le contenu ne peut pas être vide.";
+          editStatus.className = "edit-status-msg status-box error";
+          return;
+        }
+
+        if (newText === originalText) {
+          editBox.remove();
+          bodyEl.style.display = "";
+          return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Enregistrement...";
+        editStatus.className = "edit-status-msg status-box hidden";
+
+        try {
+          const res = await fetch(`/api/comments/${commentId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: newText }),
+          });
+
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            throw new Error(data.erreur || data.message || "Erreur lors de la modification.");
+          }
+
+          bodyEl.textContent = newText;
+          editBox.remove();
+          bodyEl.style.display = "";
+        } catch (err: any) {
+          editStatus.textContent = err.message || "Erreur lors de la sauvegarde.";
+          editStatus.className = "edit-status-msg status-box error";
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Enregistrer";
+        }
+      });
+    });
+
+    // Action Supprimer
+    deleteBtn?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      menuDropdown.classList.add("hidden");
+
+      const commentId = cardEl.dataset.commentId;
+      if (!commentId) return;
+
+      const isTopLevel = cardEl.classList.contains("level-1");
+      const confirmMsg = isTopLevel
+        ? "Voulez-vous vraiment supprimer ce commentaire ainsi que ses réponses éventuelles ?"
+        : "Voulez-vous vraiment supprimer cette réponse ?";
+
+      if (!window.confirm(confirmMsg)) return;
+
+      try {
+        const res = await fetch(`/api/comments/${commentId}`, {
+          method: "DELETE",
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          throw new Error(data.erreur || data.message || "Erreur lors de la suppression.");
+        }
+
+        if (isTopLevel) {
+          const threadEl = cardEl.closest(".comment-thread") as HTMLElement;
+          const repliesCount = threadEl ? threadEl.querySelectorAll(".level-2").length : 0;
+          threadEl?.remove();
+          updateCommentsCount(-(1 + repliesCount));
+        } else {
+          cardEl.remove();
+          updateCommentsCount(-1);
+        }
+
+        // Si la liste est vide, afficher le empty-state
+        if (list.children.length === 0) {
+          const reinsertedEmpty = document.createElement("p");
+          reinsertedEmpty.className = "empty-text";
+          reinsertedEmpty.id = "empty-state";
+          reinsertedEmpty.textContent = "Aucun commentaire pour le moment. Soyez le premier à donner votre avis !";
+          list.appendChild(reinsertedEmpty);
+        }
+      } catch (err: any) {
+        alert(err.message || "Impossible de supprimer le commentaire.");
+      }
+    });
   }
 
+  // Initialisation des écouteurs pour les réponses
+  function attachReplyListeners(threadEl: HTMLElement) {
+    const replyTriggerBtn = threadEl.querySelector(".reply-trigger-btn") as HTMLButtonElement;
+    const replyForm = threadEl.querySelector(".reply-form") as HTMLFormElement;
+    const replyCancelBtn = threadEl.querySelector(".reply-cancel-btn") as HTMLButtonElement;
+    const replyInput = threadEl.querySelector(".reply-input") as HTMLTextAreaElement;
+    const replySubmitBtn = threadEl.querySelector(".reply-submit-btn") as HTMLButtonElement;
+    const replyStatusMsg = threadEl.querySelector(".reply-status-msg") as HTMLSpanElement;
+    const repliesList = threadEl.querySelector(".replies-list") as HTMLDivElement;
+
+    if (!replyTriggerBtn || !replyForm) return;
+
+    replyTriggerBtn.addEventListener("click", () => {
+      const isHidden = replyForm.classList.contains("hidden");
+      if (isHidden) {
+        replyForm.classList.remove("hidden");
+        replyInput?.focus();
+      } else {
+        replyForm.classList.add("hidden");
+      }
+    });
+
+    replyCancelBtn?.addEventListener("click", () => {
+      replyForm.classList.add("hidden");
+      if (replyStatusMsg) {
+        replyStatusMsg.className = "reply-status-msg status-box hidden";
+        replyStatusMsg.textContent = "";
+      }
+    });
+
+    replyForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (!isAuthenticated) {
+        window.location.href = "/login";
+        return;
+      }
+
+      const parentId = replyForm.dataset.parentId;
+      if (!parentId) return;
+
+      const replyContent = replyInput.value.trim();
+      if (!replyContent) return;
+
+      if (replySubmitBtn) {
+        replySubmitBtn.disabled = true;
+        replySubmitBtn.textContent = "Envoi...";
+      }
+      if (replyStatusMsg) {
+        replyStatusMsg.className = "reply-status-msg status-box hidden";
+        replyStatusMsg.textContent = "";
+      }
+
+      // 1. Visuel optimiste immédiat
+      const optimisticReply = document.createElement("article");
+      optimisticReply.className = "comment-card level-2 added";
+      optimisticReply.innerHTML = `
+        <div class="comment-top">
+          <div class="author-badge">
+            <span class="reply-tag">↳ Réponse</span>
+            <strong>Vous</strong>
+          </div>
+          <div class="comment-top-right">
+            <time>À l'instant</time>
+          </div>
+        </div>
+        <p class="comment-body">${escapeHtml(replyContent)}</p>
+      `;
+
+      repliesList.appendChild(optimisticReply);
+      updateCommentsCount(1);
+      replyInput.value = "";
+
+      // 2. Envoi de la requête
+      try {
+        const response = await fetch("/api/comments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            book_id: bookId,
+            content: replyContent,
+            parent_id: Number(parentId),
+          }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.message || data.erreur || "Erreur lors de l'envoi de la réponse.");
+        }
+
+        // Succès
+        optimisticReply.dataset.commentId = String(data.id || "");
+        optimisticReply.classList.remove("added");
+
+        // Attacher le menu d'actions à cette nouvelle réponse
+        const topRight = optimisticReply.querySelector(".comment-top-right");
+        if (topRight) {
+          const menuWrapper = document.createElement("div");
+          menuWrapper.className = "comment-menu-wrapper";
+          menuWrapper.innerHTML = `
+            <button type="button" class="comment-menu-btn" aria-label="Options de la réponse" title="Options">⋯</button>
+            <div class="comment-menu-dropdown hidden">
+              <button type="button" class="menu-item action-edit">✏️ Modifier</button>
+              <button type="button" class="menu-item action-delete">🗑️ Supprimer</button>
+            </div>
+          `;
+          topRight.appendChild(menuWrapper);
+          attachMenuListeners(optimisticReply);
+        }
+
+        replyForm.reset();
+        replyForm.classList.add("hidden");
+
+        if (replyStatusMsg) {
+          replyStatusMsg.textContent = "Réponse envoyée !";
+          replyStatusMsg.className = "reply-status-msg status-box success";
+          setTimeout(() => {
+            replyStatusMsg.className = "reply-status-msg status-box hidden";
+          }, 3000);
+        }
+      } catch (err: any) {
+        // 3. Rollback en cas d'erreur
+        optimisticReply.remove();
+        updateCommentsCount(-1);
+
+        replyInput.value = replyContent;
+
+        if (replyStatusMsg) {
+          replyStatusMsg.textContent = err.message || "Impossible d'envoyer la réponse.";
+          replyStatusMsg.className = "reply-status-msg status-box error";
+        }
+      } finally {
+        if (replySubmitBtn) {
+          replySubmitBtn.disabled = false;
+          replySubmitBtn.textContent = "Envoyer la réponse";
+        }
+      }
+    });
+  }
+
+  // Attacher les écouteurs sur tous les threads et cartes existants
+  document.querySelectorAll<HTMLElement>(".comment-thread").forEach((thread) => {
+    attachReplyListeners(thread);
+  });
+
+  document.querySelectorAll<HTMLElement>(".comment-card").forEach((card) => {
+    attachMenuListeners(card);
+  });
+
+  // Soumission du formulaire principal
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const authorInput = document.getElementById("author-input") as HTMLInputElement;
-    const contentInput = document.getElementById("content-input") as HTMLTextAreaElement;
-    const container = form.closest(".comments-block") as HTMLElement;
-    const bookId = container?.dataset.bookId || "";
+    if (!isAuthenticated) {
+      window.location.href = "/login";
+      return;
+    }
 
-    const author = authorInput.value.trim();
     const content = contentInput.value.trim();
+    if (!content) return;
 
     submitBtn.disabled = true;
     submitBtn.textContent = "Envoi...";
     statusMsg.className = "status-box hidden";
     statusMsg.textContent = "";
 
-    try {
-      const res = await sendCommentMock({ bookId, author, content });
+    const emptyState = document.getElementById("empty-state");
 
-      if (res.success) {
-        if (emptyState) {
-          emptyState.remove();
-        }
-
-        const newComment = document.createElement("article");
-        newComment.className = "comment-card added";
-        newComment.innerHTML = `
-          <div class="comment-top">
-            <strong>${res.data.author}</strong>
-            <time>${res.data.date}</time>
+    // 1. Visuel optimiste immédiat
+    const optimisticThread = document.createElement("div");
+    optimisticThread.className = "comment-thread";
+    optimisticThread.innerHTML = `
+      <article class="comment-card level-1 added">
+        <div class="comment-top">
+          <div class="author-badge">
+            <span class="avatar-icon">👤</span>
+            <strong>Vous</strong>
           </div>
-          <p class="comment-body">${res.data.content}</p>
-        `;
+          <div class="comment-top-right">
+            <time>À l'instant</time>
+          </div>
+        </div>
+        <p class="comment-body">${escapeHtml(content)}</p>
+        <div class="comment-actions">
+          <button type="button" class="reply-trigger-btn" title="Répondre à ce commentaire">
+            <span class="reply-icon">↩</span> Répondre
+          </button>
+        </div>
+        <form class="reply-form hidden">
+          <div class="field">
+            <textarea class="reply-input" name="content" rows="2" placeholder="Écrivez votre réponse..." required></textarea>
+          </div>
+          <div class="reply-actions">
+            <button type="submit" class="reply-submit-btn">Envoyer la réponse</button>
+            <button type="button" class="reply-cancel-btn">Annuler</button>
+            <span class="reply-status-msg status-box hidden"></span>
+          </div>
+        </form>
+      </article>
+      <div class="replies-list"></div>
+    `;
 
-        list.prepend(newComment);
-        form.reset();
+    let emptyStateRemoved = false;
+    if (emptyState) {
+      emptyState.remove();
+      emptyStateRemoved = true;
+    }
 
-        statusMsg.textContent = "Commentaire ajouté avec succès !";
-        statusMsg.className = "status-box success";
+    list.prepend(optimisticThread);
+    updateCommentsCount(1);
+    contentInput.value = "";
+
+    // 2. Envoi de la requête
+    try {
+      const response = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          book_id: bookId,
+          content: content,
+          parent_id: null,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.message || data.erreur || "Erreur lors de l'ajout du commentaire.");
       }
+
+      // Succès
+      const newCommentId = data.id;
+      optimisticThread.dataset.threadId = String(newCommentId);
+
+      const articleEl = optimisticThread.querySelector(".comment-card.level-1") as HTMLElement;
+      if (articleEl) {
+        articleEl.dataset.commentId = String(newCommentId);
+        articleEl.classList.remove("added");
+
+        // Attacher le menu modifier/supprimer au nouveau commentaire
+        const topRight = articleEl.querySelector(".comment-top-right");
+        if (topRight) {
+          const menuWrapper = document.createElement("div");
+          menuWrapper.className = "comment-menu-wrapper";
+          menuWrapper.innerHTML = `
+            <button type="button" class="comment-menu-btn" aria-label="Options du commentaire" title="Options">⋯</button>
+            <div class="comment-menu-dropdown hidden">
+              <button type="button" class="menu-item action-edit">✏️ Modifier</button>
+              <button type="button" class="menu-item action-delete">🗑️ Supprimer</button>
+            </div>
+          `;
+          topRight.appendChild(menuWrapper);
+          attachMenuListeners(articleEl);
+        }
+      }
+
+      const replyTrigger = optimisticThread.querySelector(".reply-trigger-btn") as HTMLElement;
+      if (replyTrigger) replyTrigger.dataset.parentId = String(newCommentId);
+
+      const replyFormEl = optimisticThread.querySelector(".reply-form") as HTMLElement;
+      if (replyFormEl) replyFormEl.dataset.parentId = String(newCommentId);
+
+      const repliesListEl = optimisticThread.querySelector(".replies-list") as HTMLElement;
+      if (repliesListEl) repliesListEl.dataset.parentId = String(newCommentId);
+
+      attachReplyListeners(optimisticThread);
+
+      form.reset();
+      statusMsg.textContent = "Commentaire publié avec succès !";
+      statusMsg.className = "status-box success";
     } catch (err: any) {
-      statusMsg.textContent = err.message || "Une erreur est survenue.";
+      // 3. Rollback en cas d'erreur
+      optimisticThread.remove();
+      updateCommentsCount(-1);
+
+      contentInput.value = content;
+
+      if (emptyStateRemoved && list.children.length === 0) {
+        const reinsertedEmpty = document.createElement("p");
+        reinsertedEmpty.className = "empty-text";
+        reinsertedEmpty.id = "empty-state";
+        reinsertedEmpty.textContent = "Aucun commentaire pour le moment. Soyez le premier à donner votre avis !";
+        list.appendChild(reinsertedEmpty);
+      }
+
+      statusMsg.textContent = err.message || "Une erreur est survenue lors de l'ajout du commentaire.";
       statusMsg.className = "status-box error";
     } finally {
       submitBtn.disabled = false;
@@ -127,20 +711,50 @@ const comments = commentsByBookId[bookId] ?? [];
 </script>
 
 <style is:global>
+  .comment-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
   .comment-card {
-    background-color: #ffffff;
+    background-color: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 1rem 1.25rem;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.5rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    transition: border-color 0.15s ease;
+  }
+
+  .comment-card.level-1 {
+    background-color: #ffffff;
   }
 
   .comment-card.added {
     border-color: #93c5fd;
     background-color: #f8fafc;
     animation: fadeIn 0.3s ease-out;
+  }
+
+  .comment-card.level-2 {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 0.85rem 1rem;
+    font-size: 0.95em;
+  }
+
+  .replies-list {
+    margin-left: 1.75rem;
+    padding-left: 1.25rem;
+    border-left: 2px solid #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
   }
 
   .comment-top {
@@ -150,13 +764,183 @@ const comments = commentsByBookId[bookId] ?? [];
     font-size: 0.88rem;
   }
 
-  .comment-top strong {
+  .author-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .author-badge strong {
     color: var(--text-primary);
   }
 
-  .comment-top time {
+  .avatar-icon {
+    font-size: 0.95rem;
+    opacity: 0.8;
+  }
+
+  .reply-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #475569;
+    background-color: #e2e8f0;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+  }
+
+  .comment-top-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+  }
+
+  .comment-top-right time {
     font-size: 0.78rem;
     color: var(--text-muted);
+  }
+
+  /* Menu discret ⋯ */
+  .comment-menu-wrapper {
+    position: relative;
+  }
+
+  .comment-menu-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.15rem;
+    line-height: 1;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .comment-menu-btn:hover {
+    background-color: #f1f5f9;
+    color: var(--text-primary);
+  }
+
+  .comment-menu-dropdown {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    min-width: 120px;
+    padding: 0.3rem;
+    z-index: 20;
+  }
+
+  .comment-menu-dropdown.hidden {
+    display: none;
+  }
+
+  .menu-item {
+    background: transparent;
+    border: none;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.4rem 0.65rem;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-secondary);
+    transition: background-color 0.15s;
+    width: 100%;
+  }
+
+  .menu-item:hover {
+    background-color: #f8fafc;
+    color: var(--text-primary);
+  }
+
+  .menu-item.action-delete:hover {
+    background-color: #fef2f2;
+    color: #dc2626;
+  }
+
+  /* Boîte d'édition inline */
+  .comment-edit-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+  }
+
+  .edit-textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: #ffffff;
+    color: var(--text-primary);
+  }
+
+  .edit-textarea:focus {
+    outline: none;
+    border-color: #0f172a;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+  }
+
+  .edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .edit-save-btn {
+    background-color: #0f172a;
+    color: #ffffff;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.8rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+
+  .edit-save-btn:hover:not(:disabled) {
+    background-color: #334155;
+  }
+
+  .edit-save-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .edit-cancel-btn {
+    background-color: transparent;
+    color: #64748b;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.8rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .edit-cancel-btn:hover {
+    background-color: #e2e8f0;
+    color: #1e293b;
   }
 
   .comment-body {
@@ -164,11 +948,119 @@ const comments = commentsByBookId[bookId] ?? [];
     font-size: 0.92rem;
     color: var(--text-secondary);
     line-height: 1.5;
+    white-space: pre-line;
+  }
+
+  .comment-actions {
+    display: flex;
+    align-items: center;
+    padding-top: 0.25rem;
+  }
+
+  .reply-trigger-btn {
+    background: none;
+    border: none;
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.25rem 0.55rem;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.15s ease;
+  }
+
+  .reply-trigger-btn:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+  }
+
+  .reply-icon {
+    font-size: 0.9rem;
+  }
+
+  .reply-form {
+    margin-top: 0.6rem;
+    padding: 0.85rem;
+    background-color: #f1f5f9;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .reply-form.hidden {
+    display: none;
+  }
+
+  .reply-form .field {
+    margin-bottom: 0;
+  }
+
+  .reply-input {
+    width: 100%;
+    resize: vertical;
+    min-height: 50px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background: #ffffff;
+  }
+
+  .reply-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .reply-submit-btn {
+    background-color: #0f172a;
+    color: #ffffff;
+    font-weight: 500;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.85rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+
+  .reply-submit-btn:hover:not(:disabled) {
+    background-color: #334155;
+  }
+
+  .reply-cancel-btn {
+    background-color: transparent;
+    color: #64748b;
+    font-weight: 500;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .reply-cancel-btn:hover {
+    background-color: #e2e8f0;
+    color: #1e293b;
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 </style>
 
@@ -182,6 +1074,7 @@ const comments = commentsByBookId[bookId] ?? [];
   .block-header h2 {
     font-size: 1.3rem;
     margin: 0 0 0.2rem 0;
+    color: var(--text-primary);
   }
 
   .block-header p {
@@ -211,7 +1104,7 @@ const comments = commentsByBookId[bookId] ?? [];
     color: var(--text-secondary);
   }
 
-  input, textarea {
+  textarea {
     font-family: inherit;
     font-size: 0.9rem;
     padding: 0.6rem 0.8rem;
@@ -220,21 +1113,28 @@ const comments = commentsByBookId[bookId] ?? [];
     border-radius: 6px;
     color: var(--text-primary);
     transition: border-color 0.15s;
+    resize: vertical;
   }
 
-  input:focus, textarea:focus {
+  textarea:focus {
     outline: none;
     border-color: #0f172a;
     box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+  }
+
+  textarea:disabled {
+    background-color: #f1f5f9;
+    cursor: not-allowed;
   }
 
   .form-actions {
     display: flex;
     align-items: center;
     gap: 1rem;
+    flex-wrap: wrap;
   }
 
-  button {
+  button[type="submit"] {
     background-color: #0f172a;
     color: #ffffff;
     font-weight: 500;
@@ -246,7 +1146,7 @@ const comments = commentsByBookId[bookId] ?? [];
     transition: background-color 0.15s;
   }
 
-  button:hover:not(:disabled) {
+  button[type="submit"]:hover:not(:disabled) {
     background-color: #334155;
   }
 
@@ -255,19 +1155,34 @@ const comments = commentsByBookId[bookId] ?? [];
     cursor: not-allowed;
   }
 
+  .login-hint {
+    font-size: 0.82rem;
+    color: var(--accent-color);
+    text-decoration: underline;
+    font-weight: 500;
+  }
+
   .status-box {
     font-size: 0.85rem;
     font-weight: 500;
   }
 
-  .status-box.hidden { display: none; }
-  .status-box.success { color: #16a34a; }
-  .status-box.error { color: #dc2626; }
+  .status-box.hidden {
+    display: none;
+  }
+
+  .status-box.success {
+    color: #16a34a;
+  }
+
+  .status-box.error {
+    color: #dc2626;
+  }
 
   .comments-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
   }
 
   .empty-text {

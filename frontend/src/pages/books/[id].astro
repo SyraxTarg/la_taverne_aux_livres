@@ -25,11 +25,6 @@ try {
 
 if (!book) return Astro.redirect('/404');
 
-Astro.response.headers.set(
-  'Cache-Control',
-  'public, max-age=60, s-maxage=3600, stale-while-revalidate=86400'
-);
-
 const authorsLabel = book.authors?.length ? book.authors.map(a => a.name).join(', ') : 'Auteur inconnu';
 const year = book.published_date ? book.published_date.slice(0, 4) : 'Date inconnue';
 const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https://') : null;
