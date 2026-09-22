@@ -18,6 +18,8 @@
 
 ## Start this project
 
+Use `.env.example` to create your `.env` file with your own environment variables.
+
 Make sure a recent version of Node is installed on your machine.
 
 1. Install dependencies with `npm install`.

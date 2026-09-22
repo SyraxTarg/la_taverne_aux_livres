@@ -1,0 +1,153 @@
+---
+// src/pages/login.astro
+import Layout from "../layouts/Layout.astro";
+import { API_URL } from "astro:env/server";
+
+export const prerender = false;
+
+let errorMessage = "";
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const email = String(formData.get("email") || "").trim();
+    const password = String(formData.get("password") || "");
+
+    if (!email || !password) {
+      throw new Error("Veuillez renseigner tous les champs.");
+    }
+
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Identifiants ou mot de passe incorrect.",
+      );
+    }
+
+    if (!data.access_token) {
+      throw new Error("Réponse invalide du serveur : aucun jeton reçu.");
+    }
+
+    Astro.cookies.set("auth_token", data.access_token, {
+      path: "/",
+      maxAge: 24 * 60 * 60, // 24 h
+      httpOnly: true,
+      sameSite: "lax",
+      secure: import.meta.env.PROD,
+    });
+
+    return Astro.redirect("/");
+  } catch (err: any) {
+    errorMessage = err.message || "Impossible de joindre le serveur.";
+  }
+}
+---
+
+<Layout pageTitle="Connexion - La Taverne aux Livres">
+  <div class="auth-container">
+    <h1>Connexion</h1>
+
+    {errorMessage && <div class="alert error">{errorMessage}</div>}
+
+    <form method="POST">
+      <div class="form-group">
+        <label for="email">Adresse email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          required
+          autocomplete="email"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          required
+          autocomplete="current-password"
+        />
+      </div>
+
+      <button type="submit">Se connecter</button>
+    </form>
+
+    <p class="auth-switch">
+      Pas encore de compte ? <a href="/register">S'inscrire</a>
+    </p>
+  </div>
+</Layout>
+
+<style>
+  .auth-container {
+    max-width: 400px;
+    margin: 3rem auto;
+    padding: 2rem;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+    background: var(--bg-card, #ffffff);
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.2rem;
+  }
+
+  label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+  }
+
+  input {
+    padding: 0.6rem 0.8rem;
+    font-size: 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+  }
+
+  button {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 0.5rem;
+  }
+
+  .alert.error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+
+  .auth-switch {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 0.9rem;
+  }
+</style>

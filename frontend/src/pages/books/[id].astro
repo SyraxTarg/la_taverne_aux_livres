@@ -3,27 +3,34 @@
 import Layout from '../../layouts/Layout.astro';
 import Comments from '../../components/Comments.astro';
 import Rating from '../../components/Rating.astro';
-import { booksList, type ApiBook } from '../../data/books';
+import type { ApiBook } from '../../data/books';
+import { API_URL } from 'astro:env/server';
 
-// Génère statiquement les routes pour tous les livres connus
-export async function getStaticPaths() {
-  return booksList.map((book) => ({
-    params: { id: book.id },
-    props: { book }
-  }));
+export const prerender = false;
+
+const { id } = Astro.params;
+
+let book: ApiBook | null = null;
+
+try {
+  const response = await fetch(`${API_URL}/books/${id}`);
+  if (response.ok) {
+    book = await response.json();
+  } else {
+    return Astro.redirect('/404');
+  }
+} catch (error) {
+  return Astro.redirect('/404');
 }
 
-interface Props {
-  book: ApiBook;
-}
+if (!book) return Astro.redirect('/404');
 
-const { book } = Astro.props;
+Astro.response.headers.set(
+  'Cache-Control',
+  'public, max-age=60, s-maxage=3600, stale-while-revalidate=86400'
+);
 
-// Préparation des métadonnées
-const authorsLabel = book.authors && book.authors.length > 0
-  ? book.authors.map((a) => a.name).join(', ')
-  : 'Auteur inconnu';
-
+const authorsLabel = book.authors?.length ? book.authors.map(a => a.name).join(', ') : 'Auteur inconnu';
 const year = book.published_date ? book.published_date.slice(0, 4) : 'Date inconnue';
 const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https://') : null;
 ---
@@ -33,7 +40,6 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
     <a href="/" class="back-btn">← Retour à la bibliothèque</a>
 
     <div class="book-columns">
-      <!-- Colonne latérale : Couverture & Métadonnées -->
       <aside class="sidebar">
         <div class="cover-box">
           {coverUrl ? (
@@ -80,19 +86,17 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
             </div>
           )}
 
-          <!-- Composant interactif pour noter le livre -->
           <div class="rating-action">
             <Rating bookId={book.id} />
           </div>
         </div>
       </aside>
 
-      <!-- Colonne principale : Titre, Catégories & Description -->
       <section class="main-info">
         <header class="header">
           {book.categories && book.categories.length > 0 && (
             <div class="categories-list">
-              {book.categories.map((c) => (
+              {book.categories.map((c : {name: string}) => (
                 <span class="category-badge">{c.name}</span>
               ))}
             </div>
@@ -113,7 +117,6 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
       </section>
     </div>
 
-    <!-- Section Commentaires -->
     <Comments bookId={book.id} />
   </article>
 </Layout>
