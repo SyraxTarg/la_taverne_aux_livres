@@ -1,5 +1,4 @@
 ---
-// src/pages/login.astro
 import Layout from "../layouts/Layout.astro";
 import { API_URL } from "astro:env/server";
 
@@ -37,7 +36,7 @@ if (Astro.request.method === "POST") {
 
     Astro.cookies.set("auth_token", data.access_token, {
       path: "/",
-      maxAge: 24 * 60 * 60, // 24 h
+      maxAge: 24 * 60 * 60,
       httpOnly: true,
       sameSite: "lax",
       secure: import.meta.env.PROD,

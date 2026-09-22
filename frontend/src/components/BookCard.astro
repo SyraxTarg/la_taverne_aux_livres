@@ -1,5 +1,4 @@
 ---
-// src/components/BookCard.astro
 import type { ApiBook } from '../data/books';
 
 interface Props {
@@ -10,21 +9,17 @@ interface Props {
 
 const { book, userRating, readAt } = Astro.props;
 
-// 1. Formatage des auteurs
 const authorsLabel = book.authors && book.authors.length > 0
   ? book.authors.map((a) => a.name).join(', ')
   : 'Auteur inconnu';
 
-// 2. Extraction de l'année (prend les 4 premiers caractères de "YYYY-MM-DD" ou "YYYY")
 const year = book.published_date ? book.published_date.slice(0, 4) : null;
 
-// 3. Sécurisation de l'URL d'image en HTTPS
+// Sécurisation HTTPS (évite les avertissements de mixed content)
 const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https://') : null;
 
-// 4. Note à afficher (note utilisateur si spécifiée, sinon note moyenne du livre)
 const displayRating = userRating !== undefined ? userRating : (book.average_rating > 0 ? book.average_rating : null);
 
-// 5. Date de lecture formatée
 const formattedReadDate = readAt
   ? new Date(readAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
   : null;

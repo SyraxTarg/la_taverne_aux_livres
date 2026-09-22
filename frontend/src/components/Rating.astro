@@ -1,5 +1,4 @@
 ---
-// src/components/RatingWidget.astro
 interface Props {
   bookId: string;
   initialRating?: number;
@@ -48,7 +47,6 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
 </section>
 
 <script>
-  // Appel à la route PUT /api/readings
   async function submitRating(payload: { bookId: string; rating: number }) {
     const requestBody = {
       book_id: String(payload.bookId),
@@ -95,7 +93,6 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
       const feedback = widget.querySelector<HTMLSpanElement>("#rating-feedback");
 
       let currentRating = 0;
-      // Détecter la note initiale active
       const activeStars = widget.querySelectorAll<HTMLButtonElement>(".star-btn.is-active");
       if (activeStars.length > 0) {
         currentRating = Number(activeStars[activeStars.length - 1].dataset.rating) || 0;
@@ -119,7 +116,6 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
       };
 
       stars.forEach((star) => {
-        // Effet de prévisualisation au survol
         star.addEventListener("mouseenter", () => {
           if (!isSubmitting) {
             const val = Number(star.dataset.rating);
@@ -127,7 +123,6 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
           }
         });
 
-        // Envoi de la note au clic
         star.addEventListener("click", async () => {
           if (isSubmitting) return;
 
@@ -224,7 +219,7 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
     border: none;
     padding: 0.15rem;
     cursor: pointer;
-    color: #cbd5e1; /* Étoile vide / inactive */
+    color: #cbd5e1;
     transition: color 0.15s ease, transform 0.1s ease;
     display: inline-flex;
     align-items: center;
@@ -235,7 +230,6 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
     transform: scale(1.15);
   }
 
-  /* Étoiles dorées au survol ou validées */
   .star-btn.is-active,
   .star-btn.hovered {
     color: #f59e0b;

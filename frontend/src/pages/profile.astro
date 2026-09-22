@@ -1,5 +1,4 @@
 ---
-// src/pages/profile.astro
 export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
@@ -276,7 +275,6 @@ if (paginatedReadings.length > 0) {
     border-color: #fecdd3;
   }
 
-  /* Section Livres */
   .books-section {
     padding-top: 1rem;
     border-top: 1px solid var(--border-color);
@@ -324,7 +322,6 @@ if (paginatedReadings.length > 0) {
     border-radius: 8px;
   }
 
-  /* Responsive */
   @media (max-width: 640px) {
     .profile-card {
       flex-direction: column;

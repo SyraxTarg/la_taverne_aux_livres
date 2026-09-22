@@ -1,5 +1,4 @@
 ---
-// src/components/Comments.astro
 import type { ApiCommentWithReplies } from '../data/books';
 import { API_URL } from 'astro:env/server';
 
@@ -262,7 +261,6 @@ function formatDate(dateStr: string) {
     }
   });
 
-  // Attache la gestion du menu d'options (modifier / supprimer) sur une carte de commentaire
   function attachMenuListeners(cardEl: HTMLElement) {
     const menuBtn = cardEl.querySelector(".comment-menu-btn") as HTMLButtonElement;
     const menuDropdown = cardEl.querySelector(".comment-menu-dropdown") as HTMLElement;
@@ -274,7 +272,6 @@ function formatDate(dateStr: string) {
     menuBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const isCurrentlyHidden = menuDropdown.classList.contains("hidden");
-      // Fermer tous les autres menus d'abord
       document.querySelectorAll(".comment-menu-dropdown:not(.hidden)").forEach((d) => {
         d.classList.add("hidden");
       });
@@ -283,7 +280,6 @@ function formatDate(dateStr: string) {
       }
     });
 
-    // Action Modifier
     editBtn?.addEventListener("click", (e) => {
       e.stopPropagation();
       menuDropdown.classList.add("hidden");
@@ -365,7 +361,6 @@ function formatDate(dateStr: string) {
       });
     });
 
-    // Action Supprimer
     deleteBtn?.addEventListener("click", async (e) => {
       e.stopPropagation();
       menuDropdown.classList.add("hidden");
@@ -401,7 +396,6 @@ function formatDate(dateStr: string) {
           updateCommentsCount(-1);
         }
 
-        // Si la liste est vide, afficher le empty-state
         if (list.children.length === 0) {
           const reinsertedEmpty = document.createElement("p");
           reinsertedEmpty.className = "empty-text";
@@ -415,7 +409,6 @@ function formatDate(dateStr: string) {
     });
   }
 
-  // Initialisation des écouteurs pour les réponses
   function attachReplyListeners(threadEl: HTMLElement) {
     const replyTriggerBtn = threadEl.querySelector(".reply-trigger-btn") as HTMLButtonElement;
     const replyForm = threadEl.querySelector(".reply-form") as HTMLFormElement;
@@ -468,7 +461,7 @@ function formatDate(dateStr: string) {
         replyStatusMsg.textContent = "";
       }
 
-      // 1. Visuel optimiste immédiat
+      // UI optimiste immédiate
       const optimisticReply = document.createElement("article");
       optimisticReply.className = "comment-card level-2 added";
       optimisticReply.innerHTML = `
@@ -488,7 +481,6 @@ function formatDate(dateStr: string) {
       updateCommentsCount(1);
       replyInput.value = "";
 
-      // 2. Envoi de la requête
       try {
         const response = await fetch("/api/comments", {
           method: "POST",
@@ -506,11 +498,9 @@ function formatDate(dateStr: string) {
           throw new Error(data.message || data.erreur || "Erreur lors de l'envoi de la réponse.");
         }
 
-        // Succès
         optimisticReply.dataset.commentId = String(data.id || "");
         optimisticReply.classList.remove("added");
 
-        // Attacher le menu d'actions à cette nouvelle réponse
         const topRight = optimisticReply.querySelector(".comment-top-right");
         if (topRight) {
           const menuWrapper = document.createElement("div");
@@ -537,7 +527,7 @@ function formatDate(dateStr: string) {
           }, 3000);
         }
       } catch (err: any) {
-        // 3. Rollback en cas d'erreur
+        // Rollback en cas d'erreur réseau
         optimisticReply.remove();
         updateCommentsCount(-1);
 
@@ -556,7 +546,6 @@ function formatDate(dateStr: string) {
     });
   }
 
-  // Attacher les écouteurs sur tous les threads et cartes existants
   document.querySelectorAll<HTMLElement>(".comment-thread").forEach((thread) => {
     attachReplyListeners(thread);
   });
@@ -565,7 +554,6 @@ function formatDate(dateStr: string) {
     attachMenuListeners(card);
   });
 
-  // Soumission du formulaire principal
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -584,7 +572,7 @@ function formatDate(dateStr: string) {
 
     const emptyState = document.getElementById("empty-state");
 
-    // 1. Visuel optimiste immédiat
+    // UI optimiste immédiate
     const optimisticThread = document.createElement("div");
     optimisticThread.className = "comment-thread";
     optimisticThread.innerHTML = `
@@ -628,7 +616,6 @@ function formatDate(dateStr: string) {
     updateCommentsCount(1);
     contentInput.value = "";
 
-    // 2. Envoi de la requête
     try {
       const response = await fetch("/api/comments", {
         method: "POST",
@@ -646,7 +633,6 @@ function formatDate(dateStr: string) {
         throw new Error(data.message || data.erreur || "Erreur lors de l'ajout du commentaire.");
       }
 
-      // Succès
       const newCommentId = data.id;
       optimisticThread.dataset.threadId = String(newCommentId);
 
@@ -655,7 +641,6 @@ function formatDate(dateStr: string) {
         articleEl.dataset.commentId = String(newCommentId);
         articleEl.classList.remove("added");
 
-        // Attacher le menu modifier/supprimer au nouveau commentaire
         const topRight = articleEl.querySelector(".comment-top-right");
         if (topRight) {
           const menuWrapper = document.createElement("div");
@@ -687,7 +672,7 @@ function formatDate(dateStr: string) {
       statusMsg.textContent = "Commentaire publié avec succès !";
       statusMsg.className = "status-box success";
     } catch (err: any) {
-      // 3. Rollback en cas d'erreur
+      // Rollback en cas d'erreur réseau
       optimisticThread.remove();
       updateCommentsCount(-1);
 
@@ -803,7 +788,6 @@ function formatDate(dateStr: string) {
     color: var(--text-muted);
   }
 
-  /* Menu discret ⋯ */
   .comment-menu-wrapper {
     position: relative;
   }
@@ -874,7 +858,6 @@ function formatDate(dateStr: string) {
     color: #dc2626;
   }
 
-  /* Boîte d'édition inline */
   .comment-edit-box {
     display: flex;
     flex-direction: column;
