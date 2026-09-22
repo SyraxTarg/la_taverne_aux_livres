@@ -1,5 +1,4 @@
 ---
-// src/pages/register.astro
 import Layout from '../layouts/Layout.astro';
 import { API_URL } from 'astro:env/server';
 
@@ -14,7 +13,6 @@ if (Astro.request.method === 'POST') {
     const email = String(formData.get('email') || '').trim();
     const password = String(formData.get('password') || '');
 
-    // Validation simple
     const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const isValidPassword = password.length >= 8 && /\d/.test(password) && /[A-Z]/.test(password);
 

@@ -1,11 +1,11 @@
 ---
-// src/pages/profile.astro
 export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
 import BookCard from '../components/BookCard.astro';
+import Pagination from '../components/Pagination.astro';
 import { API_URL } from 'astro:env/server';
-import type { ApiBook } from '../data/books';
+import type { ApiBook, UserReading } from '../data/books';
 
 const token = Astro.cookies.get('auth_token')?.value;
 
@@ -22,31 +22,33 @@ interface UserProfile {
   };
 }
 
-const BOOK_DISPLAYED_LIMIT = 9;
+interface DisplayedReading {
+  reading: UserReading;
+  book: ApiBook;
+}
+
+const ITEMS_PER_PAGE = 6;
+const pageParam = Astro.url.searchParams.get('page');
+const currentPage = Math.max(1, parseInt(pageParam || '1', 10) || 1);
+
 let user: UserProfile | null = null;
-let booksList: ApiBook[] = [];
+let userReadings: UserReading[] = [];
+let displayedReadings: DisplayedReading[] = [];
 let profileError = '';
 
 try {
-  const userEndpoint = API_URL.endsWith('/api')
-    ? `${API_URL}/users/me`
-    : `${API_URL}/api/users/me`;
+  const baseApi = API_URL.replace(/\/+$/, '');
+  const userEndpoint = baseApi.endsWith('/api')
+    ? `${baseApi}/users/me`
+    : `${baseApi}/api/users/me`;
 
-  const booksUrl = new URL(
-    API_URL.endsWith('/api') ? `${API_URL}/books` : `${API_URL}/api/books`
-  );
-  booksUrl.searchParams.set('limit', String(BOOK_DISPLAYED_LIMIT));
-
-  const [userRes, booksRes] = await Promise.all([
-    fetch(userEndpoint, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-    }),
-    fetch(booksUrl),
-  ]);
+  const userRes = await fetch(userEndpoint, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
 
   if (userRes.status === 401 || userRes.status === 403) {
     Astro.cookies.delete('auth_token', { path: '/' });
@@ -59,15 +61,74 @@ try {
     profileError = 'Impossible de charger vos données de profil.';
   }
 
-  if (booksRes.ok) {
-    const booksJson = await booksRes.json();
-    booksList = booksJson.livres || [];
-  } else {
-    console.error(`Erreur API livres : ${booksRes.status}`);
+  if (user) {
+    const readingsEndpoint = baseApi.endsWith('/api')
+      ? `${baseApi}/users/${user.id}/readings`
+      : `${baseApi}/api/users/${user.id}/readings`;
+
+    const readingsRes = await fetch(readingsEndpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (readingsRes.ok) {
+      userReadings = await readingsRes.json();
+    } else {
+      console.error(`Erreur API lectures (${readingsRes.status}):`, await readingsRes.text());
+    }
   }
 } catch (error) {
   console.error('Erreur de connexion API :', error);
   profileError = 'Erreur lors de la communication avec le serveur.';
+}
+
+const totalItems = userReadings.length;
+const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+const paginatedReadings = userReadings.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+if (paginatedReadings.length > 0) {
+  const baseApi = API_URL.replace(/\/+$/, '');
+  displayedReadings = await Promise.all(
+    paginatedReadings.map(async (reading) => {
+      let bookData: ApiBook | null = null;
+
+      try {
+        const bookEndpoint = baseApi.endsWith('/api')
+          ? `${baseApi}/books/${reading.book_id}`
+          : `${baseApi}/api/books/${reading.book_id}`;
+
+        const bookRes = await fetch(bookEndpoint);
+        if (bookRes.ok) {
+          bookData = await bookRes.json();
+        }
+      } catch (err) {
+        console.error(`Erreur fetch livre ${reading.book_id} :`, err);
+      }
+
+      const finalBook: ApiBook = bookData || {
+        id: reading.book_id,
+        title: `Livre #${reading.book_id}`,
+        authors: [],
+        description: null,
+        image_url: null,
+        page_count: 0,
+        categories: [],
+        average_rating: 0,
+        ratings_count: 0,
+        maturity_rating: 'NOT_MATURE',
+        published_date: '',
+      };
+
+      return {
+        reading,
+        book: finalBook,
+      };
+    })
+  );
 }
 ---
 
@@ -104,20 +165,29 @@ try {
     <div class="list-head">
       <div>
         <h2>Mes lectures & recommandations</h2>
-        <p class="section-subtitle">Sélection disponible dans la taverne</p>
+        <p class="section-subtitle">Livres enregistrés dans vos lectures</p>
       </div>
-      <span class="book-count">{booksList.length} livre(s)</span>
+      <span class="book-count">{totalItems} livre(s) lu(s)</span>
     </div>
 
-    {booksList.length > 0 ? (
+    {displayedReadings.length > 0 ? (
       <div class="books-grid">
-        {booksList.map((book: ApiBook) => (
-          <BookCard {book} />
+        {displayedReadings.map(({ reading, book }) => (
+          <BookCard
+            book={book}
+            userRating={reading.note}
+            readAt={reading.read_at}
+          />
         ))}
       </div>
     ) : (
-      <p class="empty-state">Aucun livre disponible pour le moment.</p>
+      <p class="empty-state">Vous n'avez pas encore enregistré de lecture.</p>
     )}
+
+    <Pagination
+      currentPage={currentPage}
+      totalPages={totalPages}
+    />
   </section>
 </Layout>
 
@@ -205,7 +275,6 @@ try {
     border-color: #fecdd3;
   }
 
-  /* Section Livres */
   .books-section {
     padding-top: 1rem;
     border-top: 1px solid var(--border-color);
@@ -253,7 +322,6 @@ try {
     border-radius: 8px;
   }
 
-  /* Responsive */
   @media (max-width: 640px) {
     .profile-card {
       flex-direction: column;
