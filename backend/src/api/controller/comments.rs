@@ -9,7 +9,7 @@ use std::sync::Arc;
 // N'oublie pas d'adapter ces imports à l'architecture de ton projet
 use crate::AppState;
 use crate::api::dto::requests::comment::{CreateCommentDto, UpdateCommentDto};
-use crate::api::dto::responses::comment::{CommentResponseDto, CommentWithRepliesDto};
+use crate::api::dto::responses::comment::{CommentResponseDto, CommentWithRepliesDto, UserCommentResponseDto};
 use crate::api::middlewares::auth::RequireAuth;
 use crate::api::service::comments as comments_service; // Ton service
 use crate::api::service::comments::CommentServiceError;
@@ -59,7 +59,10 @@ pub async fn create_comment(
             let response = CommentResponseDto {
                 id: comment.id,
                 content: comment.content,
-                user_id: comment.user_id,
+                user: UserCommentResponseDto {
+                    id: claims.id,
+                    email: claims.sub.clone(),
+                },
                 book_id: comment.book_id,
                 parent_id: comment.parent_id,
                 created_at: comment.created_at.to_string(), // Convertit la date en String pour le JSON
@@ -109,31 +112,7 @@ pub async fn get_comment_by_id(
     Path(id): Path<i32>,
 ) -> Result<Json<CommentWithRepliesDto>, (StatusCode, Json<Value>)> {
     match comments_service::get_comment_by_id(&state.db_pool, id).await {
-        Ok(Some(tree)) => {
-            let reponses_dto = tree
-                .replies
-                .into_iter()
-                .map(|rep| CommentResponseDto {
-                    id: rep.id,
-                    content: rep.content,
-                    user_id: rep.user_id,
-                    book_id: rep.book_id,
-                    parent_id: rep.parent_id,
-                    created_at: rep.created_at.to_string(),
-                })
-                .collect();
-
-            let response = CommentWithRepliesDto {
-                id: tree.original.id,
-                content: tree.original.content,
-                user_id: tree.original.user_id,
-                book_id: tree.original.book_id,
-                created_at: tree.original.created_at.to_string(),
-                reponses: reponses_dto,
-            };
-
-            Ok(Json(response))
-        }
+        Ok(Some(tree)) => Ok(Json(tree.to_dto())),
         Ok(None) => Err((
             StatusCode::NOT_FOUND,
             Json(json!({ "erreur": "Commentaire introuvable" })),
@@ -179,7 +158,10 @@ pub async fn update_comment(
             let response = CommentResponseDto {
                 id: comment.id,
                 content: comment.content,
-                user_id: comment.user_id,
+                user: UserCommentResponseDto {
+                    id: claims.id,
+                    email: claims.sub.clone(),
+                },
                 book_id: comment.book_id,
                 parent_id: comment.parent_id,
                 created_at: comment.created_at.to_string(),

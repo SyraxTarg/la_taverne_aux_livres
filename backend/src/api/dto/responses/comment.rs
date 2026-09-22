@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 pub struct CommentResponseDto {
     pub id: i32,
     pub content: String,
-    pub user_id: i32,
+    pub user: UserCommentResponseDto,
     pub book_id: String,
     pub parent_id: Option<i32>,
     pub created_at: String,
@@ -16,8 +16,14 @@ pub struct CommentResponseDto {
 pub struct CommentWithRepliesDto {
     pub id: i32,
     pub content: String,
-    pub user_id: i32,
+    pub user: UserCommentResponseDto,
     pub book_id: String,
     pub created_at: String,
     pub reponses: Vec<CommentResponseDto>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct UserCommentResponseDto {
+    pub id: i32,
+    pub email: String,
 }
