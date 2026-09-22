@@ -18,8 +18,8 @@ use crate::api::dto::responses::author::AuthorDto;
 use crate::api::dto::responses::categories::CategoryDto;
 use crate::api::service::categories as categories_service;
 
-use crate::api::service::comments as comments_service; // Ton service
-use crate::api::dto::responses::comment::{CommentResponseDto, CommentWithRepliesDto};
+use crate::api::service::comments as comments_service;
+use crate::api::dto::responses::comment::CommentWithRepliesDto;
 
 
 #[derive(Deserialize, IntoParams, ToSchema)]
@@ -373,31 +373,7 @@ pub async fn get_comments_by_book(
 
     match resultat {
         Ok(comment_trees) => {
-            let mut response = Vec::new();
-
-            for tree in comment_trees {
-                let mut reponses_dto = Vec::new();
-                for rep in tree.replies {
-                    reponses_dto.push(CommentResponseDto {
-                        id: rep.id,
-                        content: rep.content,
-                        user_id: rep.user_id,
-                        book_id: rep.book_id,
-                        parent_id: rep.parent_id,
-                        created_at: rep.created_at.to_string(),
-                    });
-                }
-
-                response.push(CommentWithRepliesDto {
-                    id: tree.original.id,
-                    content: tree.original.content,
-                    user_id: tree.original.user_id,
-                    book_id: tree.original.book_id,
-                    created_at: tree.original.created_at.to_string(),
-                    reponses: reponses_dto,
-                });
-            }
-
+            let response = comment_trees.into_iter().map(|tree| tree.to_dto()).collect();
             Ok(Json(response))
         },
         Err(e) => {

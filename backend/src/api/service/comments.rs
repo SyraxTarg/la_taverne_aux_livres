@@ -1,4 +1,8 @@
-use crate::api::{entities::comment, repo::comments as repo};
+use crate::api::{
+    dto::responses::comment::{CommentResponseDto, CommentWithRepliesDto, UserCommentResponseDto},
+    entities::{comment, user},
+    repo::comments as repo,
+};
 use chrono;
 use sea_orm::DatabaseConnection;
 use sea_orm::*;
@@ -54,13 +58,81 @@ pub async fn create_comment(
 pub async fn get_comments_by_book_id(
     db: &DatabaseConnection,
     book_id: &str,
-) -> Result<Vec<comment::Model>, DbErr> {
+) -> Result<Vec<(comment::Model, Option<user::Model>)>, DbErr> {
     repo::get_comments_by_book_id(db, book_id).await
 }
 
+#[derive(Clone, Debug)]
+pub struct CommentWithUser {
+    pub comment: comment::Model,
+    pub user: Option<user::Model>,
+}
+
+impl std::ops::Deref for CommentWithUser {
+    type Target = comment::Model;
+    fn deref(&self) -> &Self::Target {
+        &self.comment
+    }
+}
+
+impl From<(comment::Model, Option<user::Model>)> for CommentWithUser {
+    fn from((comment, user): (comment::Model, Option<user::Model>)) -> Self {
+        Self { comment, user }
+    }
+}
+
+impl CommentWithUser {
+    pub fn to_dto(&self) -> CommentResponseDto {
+        let user = match &self.user {
+            Some(u) => UserCommentResponseDto {
+                id: u.id,
+                email: u.email.clone(),
+            },
+            None => UserCommentResponseDto {
+                id: self.comment.user_id,
+                email: "Utilisateur inconnu".to_string(),
+            },
+        };
+
+        CommentResponseDto {
+            id: self.comment.id,
+            content: self.comment.content.clone(),
+            user,
+            book_id: self.comment.book_id.clone(),
+            parent_id: self.comment.parent_id,
+            created_at: self.comment.created_at.to_string(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct CommentTree {
-    pub original: comment::Model,
-    pub replies: Vec<comment::Model>,
+    pub original: CommentWithUser,
+    pub replies: Vec<CommentWithUser>,
+}
+
+impl CommentTree {
+    pub fn to_dto(self) -> CommentWithRepliesDto {
+        let user = match &self.original.user {
+            Some(u) => UserCommentResponseDto {
+                id: u.id,
+                email: u.email.clone(),
+            },
+            None => UserCommentResponseDto {
+                id: self.original.comment.user_id,
+                email: "Utilisateur inconnu".to_string(),
+            },
+        };
+
+        CommentWithRepliesDto {
+            id: self.original.comment.id,
+            content: self.original.comment.content,
+            user,
+            book_id: self.original.comment.book_id,
+            created_at: self.original.comment.created_at.to_string(),
+            reponses: self.replies.into_iter().map(|rep| rep.to_dto()).collect(),
+        }
+    }
 }
 
 pub async fn get_comments_structured(
@@ -70,13 +142,14 @@ pub async fn get_comments_structured(
     let commentaires = repo::get_comments_by_book_id(db, book_id).await?;
 
     let mut originals = Vec::new();
-    let mut map_reponses: HashMap<i32, Vec<comment::Model>> = HashMap::new();
+    let mut map_reponses: HashMap<i32, Vec<CommentWithUser>> = HashMap::new();
 
-    for c in commentaires {
-        if let Some(parent_id) = c.parent_id {
-            map_reponses.entry(parent_id).or_default().push(c);
+    for item in commentaires {
+        let item = CommentWithUser::from(item);
+        if let Some(parent_id) = item.parent_id {
+            map_reponses.entry(parent_id).or_default().push(item);
         } else {
-            originals.push(c);
+            originals.push(item);
         }
     }
 
@@ -111,7 +184,7 @@ pub async fn get_comment_by_id(
     db: &DatabaseConnection,
     id: i32,
 ) -> Result<Option<CommentTree>, DbErr> {
-    let comment = match repo::get_comment_by_id(db, id).await? {
+    let (comment, user) = match repo::get_comment_by_id(db, id).await? {
         Some(c) => c,
         None => return Ok(None),
     };
@@ -119,8 +192,8 @@ pub async fn get_comment_by_id(
     let replies = repo::get_replies_by_parent_id(db, id).await?;
 
     Ok(Some(CommentTree {
-        original: comment,
-        replies,
+        original: CommentWithUser { comment, user },
+        replies: replies.into_iter().map(CommentWithUser::from).collect(),
     }))
 }
 
@@ -136,7 +209,7 @@ pub async fn update_comment(
         ));
     }
 
-    let existing = repo::get_comment_by_id(db, id)
+    let (existing, _) = repo::get_comment_by_id(db, id)
         .await?
         .ok_or(CommentServiceError::NotFound)?;
 
@@ -156,7 +229,7 @@ pub async fn delete_comment(
     id: i32,
     user_id: i32,
 ) -> Result<u64, CommentServiceError> {
-    let existing = repo::get_comment_by_id(db, id)
+    let (existing, _) = repo::get_comment_by_id(db, id)
         .await?
         .ok_or(CommentServiceError::NotFound)?;
 

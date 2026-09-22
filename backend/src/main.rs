@@ -8,7 +8,7 @@ use api::dto::responses::auth::LoginResponseDto;
 use api::dto::responses::author::AuthorDto;
 use api::dto::responses::book::BookDto;
 use api::dto::responses::categories::CategoryDto;
-use api::dto::responses::comment::{CommentResponseDto, CommentWithRepliesDto};
+use api::dto::responses::comment::{CommentResponseDto, CommentWithRepliesDto, UserCommentResponseDto};
 use api::dto::responses::search_books::{BookSearchResponse, PaginationDto};
 use api::dto::responses::user::UserResponseDto;
 use api::dto::responses::user_reading::UserReadingResponseDto;
@@ -60,7 +60,8 @@ use utoipa_swagger_ui::SwaggerUi;
             UpdateCommentDto,
             CommentWithRepliesDto,
             UserReadingDto,
-            UserReadingResponseDto
+            UserReadingResponseDto,
+            UserCommentResponseDto
         )
     ),
     tags(

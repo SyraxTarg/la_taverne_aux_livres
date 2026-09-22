@@ -1,4 +1,4 @@
-use crate::api::entities::comment;
+use crate::api::entities::{comment, user};
 use sea_orm::*;
 
 
@@ -24,10 +24,11 @@ pub async fn insert_comment(
 pub async fn get_comments_by_book_id(
     db: &DatabaseConnection,
     book_id: &str,
-) -> Result<Vec<comment::Model>, DbErr> {
+) -> Result<Vec<(comment::Model, Option<user::Model>)>, DbErr> {
     comment::Entity::find()
         .filter(comment::Column::BookId.eq(book_id))
-        .order_by_desc(comment::Column::CreatedAt) // Les plus récents en premier
+        .find_also_related(user::Entity)
+        .order_by_desc(comment::Column::CreatedAt)
         .all(db)
         .await
 }
@@ -35,16 +36,20 @@ pub async fn get_comments_by_book_id(
 pub async fn get_comment_by_id(
     db: &DatabaseConnection,
     id: i32,
-) -> Result<Option<comment::Model>, DbErr> {
-    comment::Entity::find_by_id(id).one(db).await
+) -> Result<Option<(comment::Model, Option<user::Model>)>, DbErr> {
+    comment::Entity::find_by_id(id)
+        .find_also_related(user::Entity)
+        .one(db)
+        .await
 }
 
 pub async fn get_replies_by_parent_id(
     db: &DatabaseConnection,
     parent_id: i32,
-) -> Result<Vec<comment::Model>, DbErr> {
+) -> Result<Vec<(comment::Model, Option<user::Model>)>, DbErr> {
     comment::Entity::find()
         .filter(comment::Column::ParentId.eq(parent_id))
+        .find_also_related(user::Entity)
         .order_by_asc(comment::Column::CreatedAt)
         .all(db)
         .await
