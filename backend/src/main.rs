@@ -12,6 +12,7 @@ use api::dto::responses::comment::{CommentResponseDto, CommentWithRepliesDto, Us
 use api::dto::responses::search_books::{BookSearchResponse, PaginationDto};
 use api::dto::responses::user::UserResponseDto;
 use api::dto::responses::user_reading::UserReadingResponseDto;
+use api::dto::responses::book_rating::BookRatingsStatsDto;
 use api::router::auth::auth_router;
 use api::router::books::books_router;
 use api::router::comments::comments_router;
@@ -33,6 +34,7 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::api::controller::books::get_book_by_id,
         crate::api::controller::books::get_books_by_category_id,
         crate::api::controller::books::get_comments_by_book,
+        crate::api::controller::books::get_book_ratings,
         crate::api::controller::auth::login,
         crate::api::controller::auth::register,
         crate::api::controller::users::get_me,
@@ -61,7 +63,8 @@ use utoipa_swagger_ui::SwaggerUi;
             CommentWithRepliesDto,
             UserReadingDto,
             UserReadingResponseDto,
-            UserCommentResponseDto
+            UserCommentResponseDto,
+            BookRatingsStatsDto
         )
     ),
     tags(

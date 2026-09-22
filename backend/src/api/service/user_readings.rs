@@ -42,3 +42,10 @@ pub async fn delete_user_reading(
     let rows = repo::delete_by_user_and_book(db, user_id, book_id).await?;
     Ok(rows > 0)
 }
+
+pub async fn get_book_ratings_stats(
+    db: &DatabaseConnection,
+    book_id: &str,
+) -> Result<(Option<f64>, u64), DbErr> {
+    repo::get_ratings_stats_by_book_id(db, book_id).await
+}

@@ -19,7 +19,9 @@ use crate::api::dto::responses::categories::CategoryDto;
 use crate::api::service::categories as categories_service;
 
 use crate::api::service::comments as comments_service;
+use crate::api::service::user_readings as user_readings_service;
 use crate::api::dto::responses::comment::CommentWithRepliesDto;
+use crate::api::dto::responses::book_rating::BookRatingsStatsDto;
 
 
 #[derive(Deserialize, IntoParams, ToSchema)]
@@ -381,6 +383,40 @@ pub async fn get_comments_by_book(
             Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "erreur": "Impossible de récupérer les commentaires" }))
+            ))
+        }
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/books/{book_id}/ratings",
+    responses(
+        (status = 200, description = "Statistiques des notes du livre", body = BookRatingsStatsDto),
+        (status = 500, description = "Erreur interne du serveur")
+    ),
+    params(
+        ("book_id" = String, Path, description = "L'ID Google Books du livre")
+    ),
+    tag = "books"
+)]
+pub async fn get_book_ratings(
+    State(state): State<Arc<AppState>>,
+    Path(book_id): Path<String>,
+) -> Result<Json<BookRatingsStatsDto>, (StatusCode, Json<Value>)> {
+    match user_readings_service::get_book_ratings_stats(&state.db_pool, &book_id).await {
+        Ok((average_rating, ratings_count)) => {
+            Ok(Json(BookRatingsStatsDto {
+                book_id,
+                average_rating,
+                ratings_count,
+            }))
+        }
+        Err(e) => {
+            println!("❌ Erreur récupération notes du livre : {:?}", e);
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "erreur": "Impossible de récupérer les notes du livre" })),
             ))
         }
     }

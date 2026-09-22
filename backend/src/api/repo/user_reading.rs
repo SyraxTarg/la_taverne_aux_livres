@@ -66,3 +66,28 @@ pub async fn delete_by_user_and_book(
         .await?;
     Ok(res.rows_affected)
 }
+
+pub async fn get_ratings_stats_by_book_id(
+    db: &DatabaseConnection,
+    book_id: &str,
+) -> Result<(Option<f64>, u64), DbErr> {
+    let notes: Vec<i32> = user_reading::Entity::find()
+        .filter(user_reading::Column::BookId.eq(book_id))
+        .filter(user_reading::Column::Note.is_not_null())
+        .all(db)
+        .await?
+        .into_iter()
+        .filter_map(|r| r.note)
+        .collect();
+
+    if notes.is_empty() {
+        return Ok((None, 0));
+    }
+
+    let count = notes.len() as u64;
+    let sum: i64 = notes.iter().map(|&n| n as i64).sum();
+    let avg = (sum as f64) / (count as f64);
+    let rounded = (avg * 100.0).round() / 100.0;
+
+    Ok((Some(rounded), count))
+}
