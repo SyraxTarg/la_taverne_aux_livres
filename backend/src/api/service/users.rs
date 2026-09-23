@@ -28,3 +28,11 @@ pub async fn find_by_email(
 ) -> Result<Option<user::Model>, DbErr> {
     users::find_by_email(db, email).await
 }
+
+
+pub async fn find_by_id(
+    db: &DatabaseConnection,
+    id: &i32,
+) -> Result<Option<user::Model>, DbErr> {
+    users::find_by_id(db, id).await
+}
