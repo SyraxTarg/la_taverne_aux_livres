@@ -11,3 +11,11 @@ pub struct UserResponseDto {
     pub role: RoleResponseDto
 }
 
+
+
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct UserSimpleResponseDto {
+    #[schema(value_type = u64)]
+    pub id: Number,
+    pub email: String
+}

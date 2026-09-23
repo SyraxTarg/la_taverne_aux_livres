@@ -14,7 +14,7 @@ use api::dto::responses::comment::{
 };
 use api::dto::responses::recommendation::RecommendedBookDto;
 use api::dto::responses::search_books::{BookSearchResponse, PaginationDto};
-use api::dto::responses::user::UserResponseDto;
+use api::dto::responses::user::{UserResponseDto, UserSimpleResponseDto};
 use api::dto::responses::user_reading::UserReadingResponseDto;
 use api::router::auth::auth_router;
 use api::router::books::books_router;
@@ -71,7 +71,8 @@ use utoipa_swagger_ui::SwaggerUi;
             UserReadingResponseDto,
             UserCommentResponseDto,
             BookRatingsStatsDto,
-            RecommendedBookDto
+            RecommendedBookDto,
+            UserSimpleResponseDto
         )
     ),
     tags(
