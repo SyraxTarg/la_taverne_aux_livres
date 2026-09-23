@@ -7,19 +7,24 @@ use api::dto::requests::user_reading::UserReadingDto;
 use api::dto::responses::auth::LoginResponseDto;
 use api::dto::responses::author::AuthorDto;
 use api::dto::responses::book::BookDto;
+use api::dto::responses::book_rating::BookRatingsStatsDto;
 use api::dto::responses::categories::CategoryDto;
-use api::dto::responses::comment::{CommentResponseDto, CommentWithRepliesDto, UserCommentResponseDto};
+use api::dto::responses::comment::{
+    CommentResponseDto, CommentWithRepliesDto, UserCommentResponseDto,
+};
+use api::dto::responses::recommendation::RecommendedBookDto;
 use api::dto::responses::search_books::{BookSearchResponse, PaginationDto};
 use api::dto::responses::user::UserResponseDto;
 use api::dto::responses::user_reading::UserReadingResponseDto;
-use api::dto::responses::book_rating::BookRatingsStatsDto;
 use api::router::auth::auth_router;
 use api::router::books::books_router;
 use api::router::comments::comments_router;
+use api::router::recommandations::recommandations_router;
 use api::router::user::user_router;
 use api::router::user_reading::user_reading_router;
 use axum::Router;
 use dotenv::dotenv;
+use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use reqwest::Client;
 use sea_orm::DatabaseConnection;
 use std::env;
@@ -45,6 +50,7 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::api::controller::user_readings::create_reading,
         crate::api::controller::user_readings::get_readings_by_user_id,
         crate::api::controller::user_readings::delete_reading,
+        crate::api::controller::recommandations::get_recommendations,
     ),
     components(
         schemas(
@@ -64,7 +70,8 @@ use utoipa_swagger_ui::SwaggerUi;
             UserReadingDto,
             UserReadingResponseDto,
             UserCommentResponseDto,
-            BookRatingsStatsDto
+            BookRatingsStatsDto,
+            RecommendedBookDto
         )
     ),
     tags(
@@ -73,6 +80,7 @@ use utoipa_swagger_ui::SwaggerUi;
         (name = "utilisateurs", description = "Gestion des utilisateurs"),
         (name = "comments", description = "Gestion des commentaires"),
         (name = "lectures", description = "Gestion des lectures"),
+        (name = "recommandations", description = "Système de recommandation basé sur le Machine Learning"),
     )
 )]
 struct ApiDoc;
@@ -82,6 +90,7 @@ pub struct AppState {
     pub api_url: String,
     pub http_client: Client,
     pub db_pool: DatabaseConnection,
+    pub embedding_model: Arc<TextEmbedding>,
 }
 
 #[tokio::main]
@@ -109,15 +118,26 @@ async fn main() {
     crate::api::repo::comments::creer_table_si_inexistante(&db_pool).await;
     crate::api::repo::user_reading::creer_table_si_inexistante(&db_pool).await;
 
-    // 3. Création de l'état partagé (AppState)
+    // 3. Initialisation du modèle de Machine Learning
+    println!("⏳ Initialisation du modèle de Machine Learning (FastEmbed)...");
+    let embedding_model = Arc::new(
+        TextEmbedding::try_new(
+            InitOptions::new(EmbeddingModel::MultilingualE5Small).with_show_download_progress(true),
+        )
+        .expect("❌ Impossible d'initialiser le modèle d'embedding."),
+    );
+    println!("✅ Modèle de Machine Learning prêt !");
+
+    // 4. Création de l'état partagé (AppState)
     let state = Arc::new(AppState {
         api_key,
         api_url,
         http_client: Client::new(),
-        db_pool, // 👈 On injecte le pool de connexion ici
+        db_pool,
+        embedding_model,
     });
 
-    // 4. Configuration du routeur Axum
+    // 5. Configuration du routeur Axum
     let app = Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .nest("/api/books", books_router())
@@ -125,9 +145,10 @@ async fn main() {
         .nest("/api/users", user_router())
         .nest("/api/comments", comments_router())
         .nest("/api/readings", user_reading_router())
+        .nest("/api/recommandations", recommandations_router())
         .with_state(state);
 
-    // 5. Démarrage du serveur
+    // 6. Démarrage du serveur
     let host = env::var("HOST").unwrap();
     let port = env::var("PORT").unwrap();
     let addr = format!("{}:{}", host, port);

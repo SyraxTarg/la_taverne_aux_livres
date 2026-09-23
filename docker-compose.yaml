@@ -23,6 +23,8 @@ services:
       - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://postgres:root@postgres:5432/tavern
+    volumes:
+      - fastembed-cache:/home/appuser/.fastembed_cache
 
   frontend:
     build:
@@ -34,3 +36,6 @@ services:
       - API_URL=http://backend:3000/api
     depends_on:
       - backend
+
+volumes:
+  fastembed-cache:
