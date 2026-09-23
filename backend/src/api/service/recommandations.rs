@@ -191,18 +191,18 @@ pub async fn get_recommendations_for_user(
     // Garde en mémoire les IDs des livres déjà lus pour ne pas les re-recommander
     let read_book_ids: HashSet<String> = readings.iter().map(|r| r.book_id.clone()).collect();
 
-    // 2. Sélection des meilleures lectures :
-    // On priorise les notes >= 3 (ou non notées avec une note par défaut de 3)
+    // 2. Sélection des lectures notées :
+    // Seuls les livres explicitement notés avec une note >= 3 sont pris en compte pour définir les goûts
     let mut liked_readings: Vec<_> = readings
         .into_iter()
-        .filter(|r| r.note.map_or(true, |n| n >= 3))
+        .filter(|r| r.note.map_or(false, |n| n >= 3))
         .collect();
 
     if liked_readings.is_empty() {
         return Ok(Vec::new());
     }
 
-    liked_readings.sort_by(|a, b| b.note.unwrap_or(3).cmp(&a.note.unwrap_or(3)));
+    liked_readings.sort_by(|a, b| b.note.unwrap_or(0).cmp(&a.note.unwrap_or(0)));
     let top_liked: Vec<_> = liked_readings.into_iter().take(5).collect();
 
     // 3. Récupération des détails des livres aimés via l'API Google Books
