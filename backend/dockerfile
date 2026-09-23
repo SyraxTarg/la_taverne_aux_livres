@@ -5,12 +5,13 @@ FROM rust:1-slim-bookworm AS builder
 
 WORKDIR /app
 
-# Dépendances nécessaires à la compilation (OpenSSL, curl pour télécharger Swagger UI, etc.)
+# Dépendances nécessaires à la compilation (OpenSSL, curl pour Swagger UI, build-essential pour g++/libstdc++ requis par ONNX/FastEmbed)
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     curl \
     ca-certificates \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Mise en cache des dépendances Cargo
@@ -34,23 +35,31 @@ FROM debian:bookworm-slim AS runner
 
 WORKDIR /app
 
-# Installation des certificats CA (indispensables pour les requêtes HTTPS vers Google Books)
-# et de libssl pour l'exécution
+# Installation des certificats CA, de libssl et de la lib C++ (libstdc++6) pour ONNX/FastEmbed
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
+    libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Sécurité : exécution avec un utilisateur non-root
+# Sécurité : création de l'utilisateur non-root
 RUN useradd -m -u 1001 appuser
-USER appuser
 
-# Copie du binaire compilé depuis le builder
-COPY --from=builder /app/target/release/backend /app/backend
-
-# Variables d'environnement par défaut
+# Variables d'environnement pour l'utilisateur et le cache FastEmbed / HuggingFace
+ENV HOME=/home/appuser
+ENV FASTEMBED_CACHE_DIR=/home/appuser/.fastembed_cache
+ENV HF_HOME=/home/appuser/.cache/huggingface
 ENV HOST=0.0.0.0
 ENV PORT=3000
+
+# Création des dossiers de cache avec les bonnes permissions
+RUN mkdir -p /home/appuser/.fastembed_cache /home/appuser/.cache \
+    && chown -R appuser:appuser /app /home/appuser
+
+# Copie du binaire compilé depuis le builder avec attribution à appuser
+COPY --from=builder --chown=appuser:appuser /app/target/release/backend /app/backend
+
+USER appuser
 
 # Port exposé
 EXPOSE 3000
