@@ -3,3 +3,4 @@ pub mod auth;
 pub mod user;
 pub mod comments;
 pub mod user_reading;
+pub mod recommandations;
