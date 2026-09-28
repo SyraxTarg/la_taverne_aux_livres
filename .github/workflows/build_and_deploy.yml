@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  build:
+  build-and-push:
 
     runs-on: ubuntu-latest
 
@@ -18,3 +18,20 @@ jobs:
       run: docker build ./backend --tag tavern-backend:${{ github.sha }}
     - name: Build the Docker image for frontend
       run: docker build ./frontend --tag tavern-frontend:${{ github.sha }}
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Push Docker backend image
+      run: |
+        docker push 20220796/tavern-backend:${{ vars.APP_VERSION }}
+        docker push 20220796/tavern-backend:${{ github.sha }}
+
+    - name: Push Docker frontend image
+      run: |
+        docker push 20220796/tavern-frontend:${{ vars.APP_VERSION }}
+        docker push 20220796/tavern-frontend:${{ github.sha }}
+
