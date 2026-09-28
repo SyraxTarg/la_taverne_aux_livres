@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Comments from '../../components/Comments.astro';
 import Rating from '../../components/Rating.astro';
 import MarkAsRead from '../../components/MarkAsRead.astro';
+import { removeHtmlTags } from '../../utils/html';
 import type { ApiBook, UserReading } from '../../data/books';
 import { API_URL } from 'astro:env/server';
 
@@ -96,6 +97,7 @@ try {
 const authorsLabel = book.authors?.length ? book.authors.map(a => a.name).join(', ') : 'Auteur inconnu';
 const year = book.published_date ? book.published_date.slice(0, 4) : 'Date inconnue';
 const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https://') : null;
+const cleanedDescription = removeHtmlTags(book.description);
 ---
 
 <Layout pageTitle={`${book.title} — ${authorsLabel}`}>
@@ -181,8 +183,8 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
 
         <div class="section">
           <h2>Présentation de l'ouvrage</h2>
-          {book.description ? (
-            <p class="description-text">{book.description}</p>
+          {cleanedDescription ? (
+            <p class="description-text">{cleanedDescription}</p>
           ) : (
             <p class="empty-state">
               Aucune description ou résumé n'a encore été renseigné pour ce volume dans la base de données.
