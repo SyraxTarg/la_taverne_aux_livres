@@ -1,5 +1,6 @@
 ---
 import type { ApiBook } from '../data/books';
+import { removeHtmlTags } from '../utils/html';
 
 interface Props {
   book: ApiBook;
@@ -23,6 +24,8 @@ const displayRating = userRating !== undefined ? userRating : (book.average_rati
 const formattedReadDate = readAt
   ? new Date(readAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
   : null;
+
+const cleanedDescription = removeHtmlTags(book.description);
 ---
 
 <article class="book-card">
@@ -51,7 +54,7 @@ const formattedReadDate = readAt
       </header>
 
       <p class="summary">
-        {book.description || "Aucune description disponible pour cet ouvrage."}
+        {cleanedDescription || "Aucune description disponible pour cet ouvrage."}
       </p>
 
       {(book.page_count > 0 || formattedReadDate) && (
