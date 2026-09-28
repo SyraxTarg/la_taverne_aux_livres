@@ -26,4 +26,5 @@ pub struct CommentWithRepliesDto {
 pub struct UserCommentResponseDto {
     pub id: i32,
     pub email: String,
+    pub username: String
 }

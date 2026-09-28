@@ -43,6 +43,7 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::api::controller::auth::login,
         crate::api::controller::auth::register,
         crate::api::controller::users::get_me,
+        crate::api::controller::users::get_user_by_id,
         crate::api::controller::comments::create_comment,
         crate::api::controller::comments::get_comment_by_id,
         crate::api::controller::comments::update_comment,

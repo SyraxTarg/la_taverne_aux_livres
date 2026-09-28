@@ -54,6 +54,18 @@ pub async fn get_readings_by_user_id(
         .await
 }
 
+
+pub async fn get_user_number_of_notes_over_2(
+    db: &DatabaseConnection,
+    user_id: i32,
+) -> Result<u64, DbErr> {
+    user_reading::Entity::find()
+        .filter(user_reading::Column::UserId.eq(user_id))
+        .filter(user_reading::Column::Note.gte(3))
+        .count(db)
+        .await
+}
+
 pub async fn delete_by_user_and_book(
     db: &DatabaseConnection,
     user_id: i32,

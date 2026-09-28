@@ -12,11 +12,13 @@ pub async fn create_user(
     email: String,
     hashed_password: String,
     role_id: i32,
+    username: String
 ) -> Result<user::Model, DbErr> {
     let new_user = user::ActiveModel {
         email: Set(email),
         password: Set(hashed_password),
         role_id: Set(role_id),
+        username: Set(username),
         ..Default::default()
     };
     users::insert_user(db, new_user).await
