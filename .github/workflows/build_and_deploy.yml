@@ -49,7 +49,7 @@ jobs:
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_PASSWORD }}
+          password: ${{ secrets.VM_PASSWORD }}
           port: ${{ secrets.VM_PORT }}
           script: |
             cd /home/${{ secrets.VM_USER }}/tavern
