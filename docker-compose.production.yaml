@@ -4,7 +4,7 @@ services:
     container_name: postgres
     hostname: postgres
     ports:
-      - "5445:5432"
+      - "5447:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_DB: tavern
