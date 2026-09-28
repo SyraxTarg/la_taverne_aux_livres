@@ -47,24 +47,16 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Copier le docker-compose sur le serveur
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          password: ${{ secrets.VM_PASSWORD }}
-          port: ${{ secrets.VM_PORT }}
-          source: "docker-compose.production.yaml"
-          target: "/home/***/tavern"
-
-      - name: Deploy on VM via SSH
+      - name: Déployer via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           password: ${{ secrets.VM_PASSWORD }}
-          port: ${{ secrets.VM_PORT }}
+          port: ${{ secrets.VM_PASSWORD }}
           script: |
-            cd /home/${{ secrets.VM_USER }}/tavern
+            cd /home/***/tavern
+            git reset --hard
+            git pull origin main
             docker compose --file docker-compose.production.yaml pull
             docker compose --file docker-compose.production.yaml up -d
