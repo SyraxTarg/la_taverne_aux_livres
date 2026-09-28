@@ -55,7 +55,7 @@ jobs:
           password: ${{ secrets.VM_PASSWORD }}
           port: ${{ secrets.VM_PORT }}
           script: |
-            cd /home/***/tavern
+            cd ~/la_taverne_aux_livres
             git reset --hard
             git pull origin main
             docker compose --file docker-compose.production.yaml pull
