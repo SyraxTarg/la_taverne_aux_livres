@@ -3,14 +3,14 @@ import BookCard from './BookCard.astro';
 import type { ApiBook } from '../data/books';
 
 interface Props {
-  showRecommendations?: boolean;
+  can_be_recommended?: boolean;
 }
 
-const { showRecommendations = false } = Astro.props;
+const { can_be_recommended = false } = Astro.props;
 
 const token = Astro.cookies.get('auth_token')?.value;
 const isAuthenticated = !!token;
-const shouldDisplayRecommendations = isAuthenticated && showRecommendations;
+const shouldDisplayRecommendations = isAuthenticated && can_be_recommended;
 
 // Clé unique de cache par utilisateur basée sur le token pour persister les recommandations
 const userStorageKey = token ? `taverne_recs_${token.slice(-16)}` : 'taverne_recs';
@@ -83,7 +83,7 @@ const sampleBookNoCover: ApiBook = {
 )}
 
 {/* Cas où l'utilisateur est connecté mais les conditions ne sont pas encore réunies */}
-{isAuthenticated && !showRecommendations && (
+{isAuthenticated && !can_be_recommended && (
   <section class="recommendations-placeholder">
     <div class="recommendations-card">
       <span class="recommendations-icon" aria-hidden="true">✨</span>
@@ -93,7 +93,7 @@ const sampleBookNoCover: ApiBook = {
           Pour que nous puissions vous suggérer des livres qui correspondent fidèlement à vos goûts, notre taverne a besoin d'apprendre à vous connaître !
         </p>
         <p class="recommendations-hint">
-          Partagez vos coups de cœur en notant vos lectures (3 étoiles ou plus sur au moins 5 ouvrages). Dès que nous aurons une idée de ce qui vous passionne, vos recommandations personnalisées apparaîtront ici.
+          Partagez vos coups de cœur en notant vos lectures (3 étoiles ou plus sur au moins 6 ouvrages). Dès que nous aurons une idée de ce qui vous passionne, vos recommandations personnalisées apparaîtront ici.
         </p>
       </div>
     </div>

@@ -152,13 +152,6 @@ const cleanedDescription = removeHtmlTags(book.description);
             </strong>
           </div>
 
-          {book.maturity_rating && (
-            <div class="meta-row">
-              <span>Classification</span>
-              <strong>{book.maturity_rating === 'NOT_MATURE' ? 'Tout public' : book.maturity_rating}</strong>
-            </div>
-          )}
-
           <div class="rating-action">
             <Rating
               bookId={book.id}

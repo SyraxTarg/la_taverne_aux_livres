@@ -8,9 +8,34 @@ import { API_URL } from 'astro:env/server';
 import type { ApiBook } from '../data/books';
 
 const BOOK_DISPLAYED_LIMIT = 9;
-const SHOW_RECOMMENDATIONS = true;
+const token = Astro.cookies.get('auth_token')?.value;
 
+let can_be_recommended = false;
 let booksList: ApiBook[] = [];
+
+if (token) {
+  try {
+    const baseApi = API_URL.replace(/\/+$/, '');
+    const userEndpoint = baseApi.endsWith('/api')
+      ? `${baseApi}/users/me`
+      : `${baseApi}/api/users/me`;
+
+    const userRes = await fetch(userEndpoint, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (userRes.ok) {
+      const userData = await userRes.json();
+      can_be_recommended = Boolean(userData.can_be_recommended ?? userData.can_be_recommanded);
+    } else if (userRes.status === 401 || userRes.status === 403) {
+      Astro.cookies.delete('auth_token', { path: '/' });
+    }
+  } catch (error) {
+    console.error('Impossible de récupérer le profil utilisateur :', error);
+  }
+}
 
 try {
   const apiUrl = new URL(`${API_URL}/books`);
@@ -34,7 +59,7 @@ try {
     <p>Sélection de livres lus, avis personnels et recommandations.</p>
   </section>
 
-  <Recommandations showRecommendations={SHOW_RECOMMENDATIONS} />
+  <Recommandations {can_be_recommended} />
 
   <div class="list-head">
     <h2>Sélection de livres du jour</h2>

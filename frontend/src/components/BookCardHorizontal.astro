@@ -1,5 +1,6 @@
 ---
 import type { ApiBook } from '../data/books';
+import { removeHtmlTags } from '../utils/html';
 
 interface Props {
   book: ApiBook;
@@ -13,6 +14,7 @@ const authorsLabel = book.authors && book.authors.length > 0
 
 const year = book.published_date ? book.published_date.slice(0, 4) : null;
 const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https://') : null;
+const cleanedDescription = removeHtmlTags(book.description);
 ---
 
 <article class="book-card-horizontal">
@@ -43,7 +45,7 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
       </header>
 
       <p class="summary">
-        {book.description || "Aucune description détaillée disponible pour cet enregistrement."}
+        {cleanedDescription || "Aucune description détaillée disponible pour cet enregistrement."}
       </p>
 
       <footer class="card-footer">
