@@ -11,8 +11,9 @@ use crate::AppState;
 use crate::api::dto::requests::comment::{CreateCommentDto, UpdateCommentDto};
 use crate::api::dto::responses::comment::{CommentResponseDto, CommentWithRepliesDto, UserCommentResponseDto};
 use crate::api::middlewares::auth::RequireAuth;
-use crate::api::service::comments as comments_service; // Ton service
+use crate::api::service::comments as comments_service;
 use crate::api::service::comments::CommentServiceError;
+use crate::api::service::users as users_service;
 
 #[utoipa::path(
     post,
@@ -53,6 +54,16 @@ pub async fn create_comment(
     )
     .await;
 
+    let user = match users_service::find_by_email(&state.db_pool, &claims.sub).await {
+        Ok(Some(u)) => u,
+        Ok(None) => return Err((StatusCode::NOT_FOUND, Json(json!({ "erreur": "Utilisateur introuvable" })))),
+        Err(_) => {
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(
+                json!({ "erreur": "Erreur interne de la base de données" }),
+            )));
+        }
+    };
+
     // 3. Gestion de la réponse
     match resultat {
         Ok(comment) => {
@@ -62,6 +73,7 @@ pub async fn create_comment(
                 user: UserCommentResponseDto {
                     id: claims.id,
                     email: claims.sub.clone(),
+                    username: user.username
                 },
                 book_id: comment.book_id,
                 parent_id: comment.parent_id,
@@ -153,6 +165,16 @@ pub async fn update_comment(
     Path(id): Path<i32>,
     Json(payload): Json<UpdateCommentDto>,
 ) -> Result<Json<CommentResponseDto>, (StatusCode, Json<Value>)> {
+        let user = match users_service::find_by_email(&state.db_pool, &claims.sub).await {
+        Ok(Some(u)) => u,
+        Ok(None) => return Err((StatusCode::NOT_FOUND, Json(json!({ "erreur": "Utilisateur introuvable" })))),
+        Err(_) => {
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(
+                json!({ "erreur": "Erreur interne de la base de données" }),
+            )));
+        }
+    };
+
     match comments_service::update_comment(&state.db_pool, id, claims.id, payload.content).await {
         Ok(comment) => {
             let response = CommentResponseDto {
@@ -161,6 +183,7 @@ pub async fn update_comment(
                 user: UserCommentResponseDto {
                     id: claims.id,
                     email: claims.sub.clone(),
+                    username: user.username
                 },
                 book_id: comment.book_id,
                 parent_id: comment.parent_id,

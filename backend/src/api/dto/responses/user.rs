@@ -7,8 +7,10 @@ use crate::api::dto::responses::role::RoleResponseDto;
 pub struct UserResponseDto {
     #[schema(value_type = u64)]
     pub id: Number,
+    pub username: String,
     pub email: String,
-    pub role: RoleResponseDto
+    pub role: RoleResponseDto,
+    pub can_be_recommanded: bool
 }
 
 
@@ -17,5 +19,6 @@ pub struct UserResponseDto {
 pub struct UserSimpleResponseDto {
     #[schema(value_type = u64)]
     pub id: Number,
+    pub username: String,
     pub email: String
 }

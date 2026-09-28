@@ -42,7 +42,7 @@ pub async fn register(
         Err(_) => return Err(Json(json!({ "erreur": "Erreur de base de données lors de la récupération du rôle" }))),
     };
 
-    match service::create_user(&state.db_pool, body.email, hashed_password, role.id).await {
+    match service::create_user(&state.db_pool, body.email, hashed_password, role.id, body.username).await {
         Ok(_) => Ok(Json(json!({ "message": "Utilisateur créé avec succès !" }))),
         Err(e) => Err(Json(json!({ "erreur": format!("Impossible de créer l'utilisateur : {}", e) }))),
     }
