@@ -16,6 +16,7 @@ if (!token) {
 interface UserProfile {
   id: number;
   email: string;
+  username: string;
   role: {
     id: number;
     role: string;
@@ -140,12 +141,12 @@ if (paginatedReadings.length > 0) {
       <div class="profile-card">
         <div class="profile-info-group">
           <div class="avatar-circle">
-            <span>{user.email.charAt(0).toUpperCase()}</span>
+            <span>{(user.username || 'Utilisateur').charAt(0).toUpperCase()}</span>
           </div>
 
           <div class="user-meta">
             <div class="user-name-row">
-              <h1>{user.email.split('@')[0]}</h1>
+              <h1>{user.username || 'Utilisateur'}</h1>
               <span class="role-badge">{user.role.role}</span>
             </div>
             <p class="user-email">{user.email} • ID: #{user.id}</p>

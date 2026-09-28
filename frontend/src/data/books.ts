@@ -55,6 +55,7 @@ export interface UserReading {
 export interface UserComment {
   id: number;
   email: string;
+  username?: string;
 }
 
 export interface ApiComment {
