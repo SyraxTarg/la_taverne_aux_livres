@@ -8,9 +8,40 @@ on:
 
 jobs:
 
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier les changements
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+              - 'docker-compose.production.yaml'
+            backend:
+              - 'backend/**'
+              - 'docker-compose.production.yaml'
+
+      - name: Installer Rust et Cargo (version 1.98.0)
+        uses: dtolnay/rust-toolchain@v1
+        if: steps.filter.outputs.frontend == 'true' || steps.filter.outputs.backend == 'true'
+        with:
+          toolchain: 1.98.0
+
+      - name: backend unit tests
+        if: steps.filter.outputs.backend == 'true'
+        run: |
+          cd backend
+          cargo test
+
+
   build-and-push:
 
     runs-on: ubuntu-latest
+    needs: tests
 
     steps:
     - uses: actions/checkout@v4

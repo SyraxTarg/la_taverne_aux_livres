@@ -153,7 +153,19 @@ npm run dev
 
 ---
 
-## 🧪 Documentation de l'API
+## 🧪 Tests Unitaires
+
+Le backend inclut une suite de tests unitaires couvrant l'authentification (Argon2, JWT), la validation des DTOs et les calculs du moteur de recommandation (similarité cosinus, parsing, filtrage sémantique).
+
+Pour exécuter les tests :
+```bash
+cd backend
+cargo test
+```
+
+---
+
+## 📑 Documentation de l'API
 
 ### Swagger UI
 L'API intègre une documentation interactive OpenAPI générée automatiquement via Utoipa :
