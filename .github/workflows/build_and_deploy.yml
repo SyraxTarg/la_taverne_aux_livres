@@ -90,6 +90,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
     needs: [build-and-push]
 
     steps:
