@@ -1,0 +1,290 @@
+---
+interface Props {
+  bookId: string;
+  isRead?: boolean;
+  isAuthenticated?: boolean;
+}
+
+const { bookId, isRead = false, isAuthenticated = false } = Astro.props;
+---
+
+<div
+  class="mark-as-read-widget"
+  data-book-id={bookId}
+  data-authenticated={isAuthenticated ? "true" : "false"}
+  data-is-read={isRead ? "true" : "false"}
+>
+  <button
+    type="button"
+    class={`mark-btn btn-add ${isRead ? 'hidden' : ''}`}
+    id="mark-as-read-btn"
+    title="Ajouter ce livre à vos lectures terminées"
+  >
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+    <span>Marquer comme lu</span>
+  </button>
+
+  <button
+    type="button"
+    class={`mark-btn btn-remove ${!isRead ? 'hidden' : ''}`}
+    id="remove-from-read-btn"
+    title="Supprimer ce livre de votre liste de lectures"
+  >
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="3 6 5 6 21 6"></polyline>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      <line x1="10" y1="11" x2="10" y2="17"></line>
+      <line x1="14" y1="11" x2="14" y2="17"></line>
+    </svg>
+    <span>Retirer de mes lectures</span>
+  </button>
+
+  <div class="feedback-msg hidden" id="mark-read-feedback"></div>
+</div>
+
+<script>
+  function initMarkAsRead() {
+    const widgets = document.querySelectorAll<HTMLElement>(".mark-as-read-widget");
+
+    widgets.forEach((widget) => {
+      const isAuth = widget.dataset.authenticated === "true";
+      const bookId = widget.dataset.bookId || "";
+      const addBtn = widget.querySelector<HTMLButtonElement>("#mark-as-read-btn");
+      const removeBtn = widget.querySelector<HTMLButtonElement>("#remove-from-read-btn");
+      const feedback = widget.querySelector<HTMLElement>("#mark-read-feedback");
+
+      let isLoading = false;
+      let feedbackTimer: number | null = null;
+
+      const clearFeedback = () => {
+        if (feedbackTimer) {
+          clearTimeout(feedbackTimer);
+          feedbackTimer = null;
+        }
+        if (feedback) {
+          feedback.textContent = "";
+          feedback.className = "feedback-msg hidden";
+        }
+      };
+
+      const showFeedback = (msg: string, type: 'success' | 'error' | 'pending') => {
+        if (!feedback) return;
+        if (feedbackTimer) {
+          clearTimeout(feedbackTimer);
+          feedbackTimer = null;
+        }
+        feedback.textContent = msg;
+        feedback.className = `feedback-msg ${type}`;
+        if (type !== 'pending') {
+          feedbackTimer = window.setTimeout(() => {
+            if (feedback.textContent === msg) {
+              feedback.textContent = "";
+              feedback.className = "feedback-msg hidden";
+            }
+            feedbackTimer = null;
+          }, 3500);
+        }
+      };
+
+      const setButtonsState = (isRead: boolean) => {
+        if (addBtn && removeBtn) {
+          if (isRead) {
+            addBtn.classList.add("hidden");
+            removeBtn.classList.remove("hidden");
+          } else {
+            addBtn.classList.remove("hidden");
+            removeBtn.classList.add("hidden");
+          }
+        }
+      };
+
+      if (addBtn) {
+        addBtn.addEventListener("click", async () => {
+          if (isLoading) return;
+
+          if (!isAuth) {
+            showFeedback("Vous devez être connecté pour marquer un livre comme lu.", "error");
+            return;
+          }
+
+          isLoading = true;
+          addBtn.disabled = true;
+          showFeedback("Enregistrement en cours...", "pending");
+
+          try {
+            console.log(`[MarkAsRead] Envoi de PUT /api/readings pour bookId=${bookId} avec note null`);
+            const res = await fetch("/api/readings", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ book_id: bookId, note: null }),
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+              throw new Error(data.erreur || data.message || "Erreur lors de l'enregistrement.");
+            }
+
+            setButtonsState(true);
+            showFeedback("Livre marqué comme lu !", "success");
+
+            window.dispatchEvent(
+              new CustomEvent("reading-updated", {
+                detail: { bookId, isRead: true, note: null, source: 'mark-as-read' },
+              })
+            );
+          } catch (err: any) {
+            showFeedback(err.message || "Une erreur est survenue.", "error");
+          } finally {
+            isLoading = false;
+            addBtn.disabled = false;
+          }
+        });
+      }
+
+      if (removeBtn) {
+        removeBtn.addEventListener("click", async () => {
+          if (isLoading) return;
+
+          if (!isAuth) {
+            showFeedback("Vous devez être connecté.", "error");
+            return;
+          }
+
+          isLoading = true;
+          removeBtn.disabled = true;
+          showFeedback("Suppression en cours...", "pending");
+
+          try {
+            console.log(`[MarkAsRead] Envoi de DELETE /api/readings/${bookId}`);
+            const res = await fetch(`/api/readings/${encodeURIComponent(bookId)}`, {
+              method: "DELETE",
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+              throw new Error(data.erreur || data.message || "Erreur lors de la suppression.");
+            }
+
+            setButtonsState(false);
+            showFeedback("Livre retiré de vos lectures.", "success");
+
+            window.dispatchEvent(
+              new CustomEvent("reading-updated", {
+                detail: { bookId, isRead: false, note: null, source: 'mark-as-read' },
+              })
+            );
+          } catch (err: any) {
+            showFeedback(err.message || "Une erreur est survenue.", "error");
+          } finally {
+            isLoading = false;
+            removeBtn.disabled = false;
+          }
+        });
+      }
+
+      window.addEventListener("reading-updated", ((e: CustomEvent) => {
+        if (e.detail?.bookId === bookId) {
+          if (e.detail.source !== 'mark-as-read') {
+            clearFeedback();
+          }
+          setButtonsState(!!e.detail.isRead);
+        }
+      }) as EventListener);
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initMarkAsRead);
+  } else {
+    initMarkAsRead();
+  }
+</script>
+
+<style>
+  .mark-as-read-widget {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .mark-btn {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .mark-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-add {
+    background-color: var(--accent-light, #fef3c7);
+    color: var(--accent-hover, #b45309);
+    border: 1px solid var(--accent-color, #d97706);
+  }
+
+  .btn-add:hover:not(:disabled) {
+    background-color: var(--accent-color, #d97706);
+    color: #ffffff;
+  }
+
+  .btn-remove {
+    background-color: #f1f5f9;
+    color: var(--text-secondary, #475569);
+    border: 1px solid var(--border-color, #cbd5e1);
+  }
+
+  .btn-remove:hover:not(:disabled) {
+    background-color: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
+  }
+
+  .mark-btn.hidden {
+    display: none !important;
+  }
+
+  .feedback-msg {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    animation: fadeIn 0.2s ease-out;
+    padding: 0.2rem 0;
+  }
+
+  .feedback-msg.hidden {
+    display: none;
+  }
+
+  .feedback-msg.pending {
+    color: var(--text-muted, #94a3b8);
+  }
+
+  .feedback-msg.success {
+    color: #16a34a;
+  }
+
+  .feedback-msg.error {
+    color: #dc2626;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+</style>
+
