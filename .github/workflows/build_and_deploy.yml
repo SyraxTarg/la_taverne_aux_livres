@@ -8,30 +8,44 @@ on:
 
 jobs:
 
-  build-and-push:
+  build:
 
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
     - name: Build the Docker image for backend
-      run: docker build ./backend --tag tavern-backend:${{ github.sha }}
+      run: |
+        docker build ./backend --tag tavern-backend:${{ github.sha }}
+        docker build ./backend --tag tavern-backend:${{ vars.APP_VERSION }}
     - name: Build the Docker image for frontend
-      run: docker build ./frontend --tag tavern-frontend:${{ github.sha }}
-
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    - name: Push Docker backend image
       run: |
-        docker push 20220796/tavern-backend:${{ vars.APP_VERSION }}
-        docker push 20220796/tavern-backend:${{ github.sha }}
+        docker build ./frontend --tag tavern-frontend:${{ github.sha }}
+        docker build ./frontend --tag tavern-frontend:${{ vars.APP_VERSION }}
 
-    - name: Push Docker frontend image
-      run: |
-        docker push 20220796/tavern-frontend:${{ vars.APP_VERSION }}
-        docker push 20220796/tavern-frontend:${{ github.sha }}
 
+
+  push:
+
+    runs-on: ubuntu-latest
+
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Docker backend image
+        run: |
+          docker push 20220796/tavern-backend:${{ vars.APP_VERSION }}
+          docker push 20220796/tavern-backend:${{ github.sha }}
+
+      - name: Push Docker frontend image
+        run: |
+          docker push 20220796/tavern-frontend:${{ vars.APP_VERSION }}
+          docker push 20220796/tavern-frontend:${{ github.sha }}
