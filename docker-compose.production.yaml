@@ -14,7 +14,7 @@ services:
     image: 20220796/tavern-backend:${APP_VERSION}
     container_name: backend
     ports:
-      - "3000:3000"
+      - "3030:3000"
     depends_on:
       - postgres
     env_file:
@@ -30,7 +30,7 @@ services:
       - "4321:4321"
     environment:
       - HOST=0.0.0.0
-      - API_URL=http://backend:3000/api
+      - API_URL=http://backend:3030/api
     depends_on:
       - backend
 
