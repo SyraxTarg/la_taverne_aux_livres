@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: root
 
   backend:
-    image: 20220796/tavern-backend:1.0.0
+    image: 20220796/tavern-backend:${APP_VERSION}
     container_name: backend
     ports:
       - "3000:3000"
@@ -25,7 +25,7 @@ services:
       - fastembed-cache:/home/appuser/.fastembed_cache
 
   frontend:
-    image: 20220796/tavern-frontend:1.0.0
+    image: 20220796/tavern-frontend:${APP_VERSION}
     ports:
       - "4321:4321"
     environment:
