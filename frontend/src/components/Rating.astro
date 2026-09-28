@@ -34,9 +34,26 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
   </div>
 
   <div class="rating-footer">
-    <span class="rating-score" id="score-text">
-      {initialRating ? `Votre note : ${initialRating}/5` : (isAuthenticated ? "Pas encore de note" : "Connexion requise")}
-    </span>
+    <div class="rating-footer-main">
+      <span class="rating-score" id="score-text">
+        {initialRating ? `Votre note : ${initialRating}/5` : (isAuthenticated ? "Pas encore de note" : "Connexion requise")}
+      </span>
+      {isAuthenticated && (
+        <button
+          type="button"
+          class={`delete-rating-btn ${!initialRating ? 'hidden' : ''}`}
+          id="delete-rating-btn"
+          title="Supprimer ma note"
+          aria-label="Supprimer ma note"
+        >
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Supprimer</span>
+        </button>
+      )}
+    </div>
     {!isAuthenticated && (
       <p class="login-prompt">
         <a href="/login">Se connecter</a> pour enregistrer une note.
@@ -82,6 +99,32 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
     };
   }
 
+  async function deleteRating(bookId: string) {
+    console.log(`[Rating] Envoi de la requête DELETE /api/readings/${bookId}`);
+
+    const response = await fetch(`/api/readings/${encodeURIComponent(bookId)}`, {
+      method: 'DELETE',
+    });
+
+    let data: any;
+    try {
+      data = await response.json();
+    } catch {
+      data = { erreur: `Erreur serveur (${response.status})` };
+    }
+
+    console.log(`[Rating] Réponse reçue de DELETE /api/readings/${bookId} :`, response.status, data);
+
+    if (!response.ok) {
+      throw new Error(data.erreur || data.message || "Erreur lors de la suppression de la note.");
+    }
+
+    return {
+      success: true,
+      data,
+    };
+  }
+
   function initRatingWidgets() {
     const widgets = document.querySelectorAll<HTMLElement>(".rating-widget");
 
@@ -91,6 +134,7 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
       const stars = widget.querySelectorAll<HTMLButtonElement>(".star-btn");
       const scoreText = widget.querySelector<HTMLSpanElement>("#score-text");
       const feedback = widget.querySelector<HTMLSpanElement>("#rating-feedback");
+      const deleteBtn = widget.querySelector<HTMLButtonElement>("#delete-rating-btn");
 
       let currentRating = 0;
       const activeStars = widget.querySelectorAll<HTMLButtonElement>(".star-btn.is-active");
@@ -99,6 +143,38 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
       }
 
       let isSubmitting = false;
+      let feedbackTimer: number | null = null;
+
+      const clearFeedback = () => {
+        if (feedbackTimer) {
+          clearTimeout(feedbackTimer);
+          feedbackTimer = null;
+        }
+        if (feedback) {
+          feedback.textContent = "";
+          feedback.className = "rating-feedback hidden";
+        }
+      };
+
+      const showFeedback = (msg: string, type: 'success' | 'error' | 'pending') => {
+        if (!feedback) return;
+        if (feedbackTimer) {
+          clearTimeout(feedbackTimer);
+          feedbackTimer = null;
+        }
+        feedback.textContent = msg;
+        feedback.className = `rating-feedback ${type}`;
+
+        if (type !== 'pending') {
+          feedbackTimer = window.setTimeout(() => {
+            if (feedback.textContent === msg) {
+              feedback.textContent = "";
+              feedback.className = "rating-feedback hidden";
+            }
+            feedbackTimer = null;
+          }, 3500);
+        }
+      };
 
       const highlightStars = (count: number) => {
         stars.forEach((star) => {
@@ -129,20 +205,15 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
           const selectedRating = parseInt(star.dataset.rating || "0", 10);
 
           if (!isAuth) {
-            if (feedback) {
-              feedback.textContent = "Vous devez être connecté pour noter un livre.";
-              feedback.className = "rating-feedback error";
-            }
+            showFeedback("Vous devez être connecté pour noter un livre.", "error");
             return;
           }
 
           isSubmitting = true;
           stars.forEach((btn) => (btn.disabled = true));
+          if (deleteBtn) deleteBtn.disabled = true;
 
-          if (feedback) {
-            feedback.textContent = "Enregistrement...";
-            feedback.className = "rating-feedback pending";
-          }
+          showFeedback("Enregistrement...", "pending");
 
           try {
             const res = await submitRating({ bookId, rating: selectedRating });
@@ -155,22 +226,87 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
                 scoreText.textContent = `Votre note : ${currentRating}/5`;
               }
 
-              if (feedback) {
-                feedback.textContent = "Note enregistrée !";
-                feedback.className = "rating-feedback success";
+              if (deleteBtn) {
+                deleteBtn.classList.remove("hidden");
               }
+
+              showFeedback("Note enregistrée !", "success");
+
+              window.dispatchEvent(
+                new CustomEvent("reading-updated", {
+                  detail: { bookId, isRead: true, note: currentRating, source: 'rating' },
+                })
+              );
             }
           } catch (err: any) {
-            if (feedback) {
-              feedback.textContent = err.message || "Erreur lors de l'enregistrement.";
-              feedback.className = "rating-feedback error";
-            }
+            showFeedback(err.message || "Erreur lors de l'enregistrement.", "error");
           } finally {
             isSubmitting = false;
             stars.forEach((btn) => (btn.disabled = false));
+            if (deleteBtn) deleteBtn.disabled = false;
           }
         });
       });
+
+      if (deleteBtn) {
+        deleteBtn.addEventListener("click", async () => {
+          if (isSubmitting || !isAuth) return;
+
+          isSubmitting = true;
+          stars.forEach((btn) => (btn.disabled = true));
+          deleteBtn.disabled = true;
+
+          showFeedback("Suppression de la note...", "pending");
+
+          try {
+            const res = await deleteRating(bookId);
+
+            if (res.success) {
+              currentRating = 0;
+              resetStarStyles();
+
+              if (scoreText) {
+                scoreText.textContent = "Pas encore de note";
+              }
+
+              deleteBtn.classList.add("hidden");
+
+              showFeedback("Note supprimée avec succès !", "success");
+
+              window.dispatchEvent(
+                new CustomEvent("reading-updated", {
+                  detail: { bookId, isRead: false, note: null, source: 'rating' },
+                })
+              );
+            }
+          } catch (err: any) {
+            showFeedback(err.message || "Erreur lors de la suppression de la note.", "error");
+          } finally {
+            isSubmitting = false;
+            stars.forEach((btn) => (btn.disabled = false));
+            deleteBtn.disabled = false;
+          }
+        });
+      }
+
+      window.addEventListener("reading-updated", ((e: CustomEvent) => {
+        if (e.detail?.bookId === bookId) {
+          if (e.detail.source !== 'rating') {
+            clearFeedback();
+          }
+
+          if (!e.detail.isRead) {
+            currentRating = 0;
+            resetStarStyles();
+            if (scoreText) {
+              scoreText.textContent = "Pas encore de note";
+            }
+            if (deleteBtn) {
+              deleteBtn.classList.add("hidden");
+            }
+          }
+        }
+      }) as EventListener);
 
       widget.addEventListener("mouseleave", () => {
         if (!isSubmitting) {
@@ -247,9 +383,45 @@ const { bookId, initialRating, isAuthenticated = false } = Astro.props;
     font-size: 0.8rem;
   }
 
+  .rating-footer-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
   .rating-score {
     font-weight: 500;
     color: var(--text-secondary);
+  }
+
+  .delete-rating-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: transparent;
+    border: 1px solid #fca5a5;
+    color: #dc2626;
+    border-radius: 4px;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .delete-rating-btn:hover:not(:disabled) {
+    background-color: #fee2e2;
+    border-color: #ef4444;
+  }
+
+  .delete-rating-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .delete-rating-btn.hidden {
+    display: none;
   }
 
   .rating-feedback {

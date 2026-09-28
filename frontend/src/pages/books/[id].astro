@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Comments from '../../components/Comments.astro';
 import Rating from '../../components/Rating.astro';
+import MarkAsRead from '../../components/MarkAsRead.astro';
 import type { ApiBook, UserReading } from '../../data/books';
 import { API_URL } from 'astro:env/server';
 
@@ -27,6 +28,7 @@ if (!book) return Astro.redirect('/404');
 const token = Astro.cookies.get('auth_token')?.value;
 const isAuthenticated = !!token;
 let userRating: number | undefined = undefined;
+let isRead = false;
 
 if (isAuthenticated && token) {
   try {
@@ -56,8 +58,11 @@ if (isAuthenticated && token) {
       if (readingsRes.ok) {
         const readings: UserReading[] = await readingsRes.json();
         const existingReading = readings.find((r) => r.book_id === id);
-        if (existingReading && typeof existingReading.note === 'number') {
-          userRating = existingReading.note;
+        if (existingReading) {
+          isRead = true;
+          if (typeof existingReading.note === 'number') {
+            userRating = existingReading.note;
+          }
         }
       }
     }
@@ -86,6 +91,14 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
               <span class="no-cover-text">Sans illustration</span>
             </div>
           )}
+        </div>
+
+        <div class="mark-as-read-action">
+          <MarkAsRead
+            bookId={book.id}
+            isRead={isRead}
+            isAuthenticated={isAuthenticated}
+          />
         </div>
 
         <div class="meta-box">
@@ -233,6 +246,10 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
   .no-cover-text {
     font-size: 0.85rem;
     font-weight: 500;
+  }
+
+  .mark-as-read-action {
+    margin-top: 1.25rem;
   }
 
   .meta-box {
