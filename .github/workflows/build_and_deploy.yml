@@ -25,11 +25,10 @@ jobs:
               - 'backend/**'
               - 'docker-compose.production.yaml'
 
-      - name: Install cargo from crates.io
-        uses: baptiste0928/cargo-install@v3
+      - name: Installer Rust et Cargo (version 1.98.0)
+        uses: dtolnay/rust-toolchain@v1
         with:
-          crate: cargo
-          version: '^1.98.0'
+          toolchain: 1.98.0
 
       - name: backend unit tests
         run: |
