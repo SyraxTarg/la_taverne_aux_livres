@@ -15,6 +15,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build the Docker image for backend
-      run: docker build ./backend --file Dockerfile --tag tavern-backend:${{ github.sha }}
+      run: docker build ./backend --file dockerfile --tag tavern-backend:${{ github.sha }}
     - name: Build the Docker image for frontend
-      run: docker build ./frontend --file Dockerfile --tag tavern-frontend:${{ github.sha }}
+      run: docker build ./frontend --file dockerfile --tag tavern-frontend:${{ github.sha }}
