@@ -58,5 +58,6 @@ jobs:
             cd ~/la_taverne_aux_livres
             git reset --hard
             git pull origin main
+            export APP_VERSION=${{vars.APP_VERSION}}
             docker compose --file docker-compose.production.yaml pull
             docker compose --file docker-compose.production.yaml up -d
