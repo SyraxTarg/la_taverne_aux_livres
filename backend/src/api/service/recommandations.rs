@@ -413,3 +413,199 @@ pub async fn get_recommendations_for_user(
     scored_books.truncate(limit);
     Ok(scored_books)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_cosine_similarity_identical() {
+        let v1 = vec![1.0, 2.0, 3.0];
+        let v2 = vec![1.0, 2.0, 3.0];
+        let sim = compute_cosine_similarity(&v1, &v2);
+        assert!((sim - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_cosine_similarity_proportional() {
+        let v1 = vec![1.0, 2.0, 3.0];
+        let v2 = vec![2.0, 4.0, 6.0];
+        let sim = compute_cosine_similarity(&v1, &v2);
+        assert!((sim - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_cosine_similarity_orthogonal() {
+        let v1 = vec![1.0, 0.0];
+        let v2 = vec![0.0, 1.0];
+        let sim = compute_cosine_similarity(&v1, &v2);
+        assert_eq!(sim, 0.0);
+    }
+
+    #[test]
+    fn test_cosine_similarity_opposite() {
+        let v1 = vec![1.0, 0.0];
+        let v2 = vec![-1.0, 0.0];
+        let sim = compute_cosine_similarity(&v1, &v2);
+        assert!((sim - (-1.0)).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_cosine_similarity_zero_vector() {
+        let v1 = vec![0.0, 0.0, 0.0];
+        let v2 = vec![1.0, 2.0, 3.0];
+        let sim = compute_cosine_similarity(&v1, &v2);
+        assert_eq!(sim, 0.0);
+    }
+
+    #[test]
+    fn test_is_vague_or_generic_category() {
+        // Doit identifier les catégories vagues
+        assert!(is_vague_or_generic_category("General"));
+        assert!(is_vague_or_generic_category("general"));
+        assert!(is_vague_or_generic_category("Reference"));
+        assert!(is_vague_or_generic_category("Literary Collections"));
+        assert!(is_vague_or_generic_category("Fiction"));
+        assert!(is_vague_or_generic_category("non-fiction"));
+        assert!(is_vague_or_generic_category("juvenile fiction"));
+        assert!(is_vague_or_generic_category("général"));
+        assert!(is_vague_or_generic_category(""));
+        assert!(is_vague_or_generic_category("   "));
+
+        // Ne doit pas filtrer les catégories spécifiques
+        assert!(!is_vague_or_generic_category("Science Fiction"));
+        assert!(!is_vague_or_generic_category("Dystopian"));
+        assert!(!is_vague_or_generic_category("Fantasy"));
+        assert!(!is_vague_or_generic_category("History"));
+        assert!(!is_vague_or_generic_category("Philosophy"));
+    }
+
+    #[test]
+    fn test_parse_book_dto_valid() {
+        let payload = json!({
+            "id": "book_abc_123",
+            "volumeInfo": {
+                "title": "Dune",
+                "authors": ["Frank Herbert"],
+                "description": "L'épopée de Paul Atréides sur Arrakis.",
+                "pageCount": 412,
+                "categories": ["Fiction / Science Fiction"],
+                "averageRating": 4.5,
+                "ratingsCount": 120,
+                "imageLinks": {
+                    "thumbnail": "http://example.com/dune.jpg"
+                },
+                "publishedDate": "1965",
+                "maturityRating": "NOT_MATURE"
+            }
+        });
+
+        let parsed = parse_book_dto(&payload).expect("Le parsing de BookDto doit réussir");
+        assert_eq!(parsed.id, "book_abc_123");
+        assert_eq!(parsed.title, "Dune");
+        assert_eq!(parsed.authors.len(), 1);
+        assert_eq!(parsed.authors[0].name, "Frank Herbert");
+        assert_eq!(
+            parsed.description,
+            Some("L'épopée de Paul Atréides sur Arrakis.".to_string())
+        );
+        assert_eq!(
+            parsed.image_url,
+            Some("http://example.com/dune.jpg".to_string())
+        );
+        // Categories "Fiction / Science Fiction" sont séparées
+        assert_eq!(parsed.categories.len(), 2);
+        assert_eq!(parsed.categories[0].name, "Fiction");
+        assert_eq!(parsed.categories[1].name, "Science Fiction");
+    }
+
+    #[test]
+    fn test_parse_book_dto_empty_id() {
+        let payload = json!({
+            "id": "",
+            "volumeInfo": {
+                "title": "Sans ID"
+            }
+        });
+        assert!(parse_book_dto(&payload).is_none());
+    }
+
+    #[test]
+    fn test_parse_book_dto_defaults() {
+        let payload = json!({
+            "id": "minimal_id",
+            "volumeInfo": {
+                "title": "Livre Minimal"
+            }
+        });
+
+        let parsed = parse_book_dto(&payload).expect("Parsing doit réussir");
+        assert_eq!(parsed.id, "minimal_id");
+        assert_eq!(parsed.title, "Livre Minimal");
+        assert!(parsed.authors.is_empty());
+        assert!(parsed.categories.is_empty());
+        assert_eq!(parsed.description, None);
+        assert_eq!(parsed.image_url, None);
+    }
+
+    #[test]
+    fn test_liked_book_to_query_text() {
+        let book = BookDto {
+            id: "1".into(),
+            title: "1984".into(),
+            authors: vec![AuthorDto {
+                name: "George Orwell".into(),
+            }],
+            categories: vec![
+                CategoryDto {
+                    name: "Fiction".into(),
+                }, // vague, doit être filtrée
+                CategoryDto {
+                    name: "Dystopian".into(),
+                }, // spécifique, conservée
+            ],
+            description: Some("Big Brother is watching you.".into()),
+            image_url: None,
+            page_count: serde_json::Number::from(328),
+            average_rating: serde_json::Number::from_f64(4.8).unwrap(),
+            ratings_count: serde_json::Number::from(500),
+            maturity_rating: "NOT_MATURE".into(),
+            published_date: "1949".into(),
+        };
+
+        let query_text = liked_book_to_query_text(&book);
+        assert!(query_text.starts_with("query: "));
+        assert!(query_text.contains("1984"));
+        assert!(query_text.contains("George Orwell"));
+        assert!(query_text.contains("Dystopian"));
+        assert!(!query_text.contains("Fiction"));
+    }
+
+    #[test]
+    fn test_candidate_to_passage_text() {
+        let book = BookDto {
+            id: "2".into(),
+            title: "Le Meilleur des mondes".into(),
+            authors: vec![AuthorDto {
+                name: "Aldous Huxley".into(),
+            }],
+            categories: vec![CategoryDto {
+                name: "Science Fiction".into(),
+            }],
+            description: Some("Société dystopique et clonage.".into()),
+            image_url: None,
+            page_count: serde_json::Number::from(285),
+            average_rating: serde_json::Number::from_f64(4.6).unwrap(),
+            ratings_count: serde_json::Number::from(300),
+            maturity_rating: "NOT_MATURE".into(),
+            published_date: "1932".into(),
+        };
+
+        let passage_text = candidate_to_passage_text(&book);
+        assert!(passage_text.starts_with("passage: "));
+        assert!(passage_text.contains("Le Meilleur des mondes"));
+        assert!(passage_text.contains("Aldous Huxley"));
+        assert!(passage_text.contains("Science Fiction"));
+    }
+}
