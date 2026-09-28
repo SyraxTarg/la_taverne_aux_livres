@@ -50,19 +50,6 @@ const formattedReadDate = readAt
         <h3 class="card-title" title={book.title}>{book.title}</h3>
       </header>
 
-      {displayRating !== null && displayRating > 0 ? (
-        <div class="rating-box">
-          <div class="stars">
-            {Array.from({ length: 5 }).map((_, idx) => (
-              <span class={idx < Math.round(displayRating) ? "star filled" : "star"}>★</span>
-            ))}
-          </div>
-          <span class="rating-text">({displayRating}/5){userRating !== undefined ? ' • Ma note' : ''}</span>
-        </div>
-      ) : (
-        <span class="no-rating">{userRating !== undefined ? 'Pas encore noté' : 'Non noté'}</span>
-      )}
-
       <p class="summary">
         {book.description || "Aucune description disponible pour cet ouvrage."}
       </p>

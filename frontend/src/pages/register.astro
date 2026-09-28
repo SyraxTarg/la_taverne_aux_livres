@@ -10,13 +10,16 @@ let successMessage = '';
 if (Astro.request.method === 'POST') {
   try {
     const formData = await Astro.request.formData();
+    const username = String(formData.get('username') || '').trim();
     const email = String(formData.get('email') || '').trim();
     const password = String(formData.get('password') || '');
 
     const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const isValidPassword = password.length >= 8 && /\d/.test(password) && /[A-Z]/.test(password);
 
-    if (!isValidEmail) {
+    if (!username) {
+      errorMessage = "Le nom d'utilisateur est requis.";
+    } else if (!isValidEmail) {
       errorMessage = "Format d'adresse email invalide.";
     } else if (!isValidPassword) {
       errorMessage = 'Le mot de passe doit comporter au moins 8 caractères, dont une majuscule et un chiffre.';
@@ -24,13 +27,13 @@ if (Astro.request.method === 'POST') {
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, role_id: 2 }),
+        body: JSON.stringify({ email, password, username }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        errorMessage = data.message || "Échec de l'inscription";
+        errorMessage = data.erreur || data.message || "Échec de l'inscription";
       } else {
         return Astro.redirect('/login');
       }
@@ -50,6 +53,11 @@ if (Astro.request.method === 'POST') {
 
     <!-- Formulaire HTML standard en méthode POST sans fetch JS -->
     <form method="POST">
+      <div class="form-group">
+        <label for="username">Nom d'utilisateur</label>
+        <input type="text" id="username" name="username" required autocomplete="username" />
+      </div>
+
       <div class="form-group">
         <label for="email">Adresse email</label>
         <input type="email" id="email" name="email" required autocomplete="email" />

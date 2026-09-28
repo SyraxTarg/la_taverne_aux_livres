@@ -64,10 +64,9 @@ function formatDate(dateStr: string) {
   }
 }
 
-function formatAuthorName(user?: { id?: number; email?: string } | null, fallbackId?: number): string {
-  if (user?.email) {
-    const username = user.email.split('@')[0];
-    return username || user.email;
+function formatAuthorName(user?: { id?: number; email?: string; username?: string } | null, fallbackId?: number): string {
+  if (user?.username) {
+    return user.username;
   }
   if (user?.id) {
     return `Lecteur #${user.id}`;

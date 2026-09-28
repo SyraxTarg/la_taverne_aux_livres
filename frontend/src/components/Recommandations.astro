@@ -1,0 +1,473 @@
+---
+import BookCard from './BookCard.astro';
+import type { ApiBook } from '../data/books';
+
+interface Props {
+  showRecommendations?: boolean;
+}
+
+const { showRecommendations = false } = Astro.props;
+
+const token = Astro.cookies.get('auth_token')?.value;
+const isAuthenticated = !!token;
+const shouldDisplayRecommendations = isAuthenticated && showRecommendations;
+
+// Clé unique de cache par utilisateur basée sur le token pour persister les recommandations
+const userStorageKey = token ? `taverne_recs_${token.slice(-16)}` : 'taverne_recs';
+
+// Modèles pour instancier BookCard dans les templates HTML (avec et sans couverture)
+const sampleBookWithCover: ApiBook = {
+  id: '',
+  title: '',
+  authors: [],
+  description: '',
+  image_url: 'https://placeholder.invalid',
+  page_count: 0,
+  categories: [{ name: '' }],
+  average_rating: 0,
+  ratings_count: 0,
+  maturity_rating: '',
+  published_date: '',
+};
+
+const sampleBookNoCover: ApiBook = {
+  id: '',
+  title: '',
+  authors: [],
+  description: '',
+  image_url: null,
+  page_count: 0,
+  categories: [],
+  average_rating: 0,
+  ratings_count: 0,
+  maturity_rating: '',
+  published_date: '',
+};
+---
+
+{/* Cas où les conditions sont réunies : bouton pour générer les recommandations avec loader */}
+{shouldDisplayRecommendations && (
+  <section class="recommendations-section" id="recommendations-section" data-cache-key={userStorageKey}>
+    <div class="list-head rec-head">
+      <div>
+        <h2>Recommandations pour vous</h2>
+        <p class="section-subtitle">
+          Découvrez des lectures suggérées par notre algorithme selon vos préférences.
+          <span class="rec-timestamp hidden" id="rec-timestamp"></span>
+        </p>
+      </div>
+      <button type="button" class="btn-generate-rec" id="btn-generate-rec">
+        <span class="btn-icon">✨</span>
+        <span class="btn-text" id="btn-text">Générer mes recommandations</span>
+      </button>
+    </div>
+
+    <div class="rec-loading hidden" id="rec-loading" role="status" aria-live="polite">
+      <div class="spinner"></div>
+      <p class="loading-title">Génération de vos recommandations en cours...</p>
+      <p class="loading-desc">Notre modèle d'intelligence artificielle analyse vos lectures et calcule les meilleures correspondances. Cela peut prendre quelques instants.</p>
+    </div>
+
+    <div class="rec-error hidden" id="rec-error"></div>
+
+    <section class="books-grid hidden" id="rec-books-grid"></section>
+
+    {/* Templates basés directement sur le composant BookCard */}
+    <template id="rec-card-template-cover">
+      <BookCard book={sampleBookWithCover} />
+    </template>
+    <template id="rec-card-template-nocover">
+      <BookCard book={sampleBookNoCover} />
+    </template>
+  </section>
+)}
+
+{/* Cas où l'utilisateur est connecté mais les conditions ne sont pas encore réunies */}
+{isAuthenticated && !showRecommendations && (
+  <section class="recommendations-placeholder">
+    <div class="recommendations-card">
+      <span class="recommendations-icon" aria-hidden="true">✨</span>
+      <div class="recommendations-content">
+        <h3>Envie de recommandations sur mesure ?</h3>
+        <p>
+          Pour que nous puissions vous suggérer des livres qui correspondent fidèlement à vos goûts, notre taverne a besoin d'apprendre à vous connaître !
+        </p>
+        <p class="recommendations-hint">
+          Partagez vos coups de cœur en notant vos lectures (3 étoiles ou plus sur au moins 5 ouvrages). Dès que nous aurons une idée de ce qui vous passionne, vos recommandations personnalisées apparaîtront ici.
+        </p>
+      </div>
+    </div>
+  </section>
+)}
+
+<script>
+  function createCardFromBookCard(book: any): HTMLElement | null {
+    const templateId = book.image_url ? 'rec-card-template-cover' : 'rec-card-template-nocover';
+    const tpl = document.getElementById(templateId) as HTMLTemplateElement | null;
+    if (!tpl || !tpl.content.firstElementChild) return null;
+
+    const node = tpl.content.firstElementChild.cloneNode(true) as HTMLElement;
+
+    // Lien de la carte
+    const link = node.querySelector('.card-link') as HTMLAnchorElement | null;
+    if (link) {
+      link.href = `/books/${encodeURIComponent(book.id)}`;
+    }
+
+    // Image de couverture
+    const img = node.querySelector('.image-wrapper img') as HTMLImageElement | null;
+    if (img && book.image_url) {
+      img.src = book.image_url.replace(/^http:\/\//i, 'https://');
+      img.alt = book.title || 'Couverture';
+    }
+
+    // Catégorie
+    const catBadge = node.querySelector('.category-badge') as HTMLElement | null;
+    if (catBadge) {
+      if (book.categories && book.categories.length > 0 && book.categories[0].name) {
+        catBadge.textContent = book.categories[0].name;
+      } else {
+        catBadge.remove();
+      }
+    }
+
+    // Auteurs et date de publication
+    const metaAuthor = node.querySelector('.meta-author') as HTMLElement | null;
+    if (metaAuthor) {
+      const authorsLabel = book.authors && book.authors.length > 0
+        ? book.authors.map((a: any) => a.name).join(', ')
+        : 'Auteur inconnu';
+      const year = book.published_date ? book.published_date.slice(0, 4) : null;
+      metaAuthor.textContent = `${authorsLabel}${year ? ` • ${year}` : ''}`;
+    }
+
+    // Titre
+    const titleEl = node.querySelector('.card-title') as HTMLElement | null;
+    if (titleEl) {
+      titleEl.textContent = book.title;
+      titleEl.title = book.title;
+    }
+
+    // Description / Résumé
+    const summaryEl = node.querySelector('.summary') as HTMLElement | null;
+    if (summaryEl) {
+      summaryEl.textContent = book.description || 'Aucune description disponible pour cet ouvrage.';
+    }
+
+    // Footer (nombre de pages)
+    const footerEl = node.querySelector('.card-footer') as HTMLElement | null;
+    if (footerEl) {
+      if (book.page_count > 0) {
+        footerEl.innerHTML = `<span>${book.page_count} pages</span>`;
+      } else {
+        footerEl.remove();
+      }
+    }
+
+    return node;
+  }
+
+  function initRecommendations() {
+    const sectionEl = document.getElementById('recommendations-section');
+    const btn = document.getElementById('btn-generate-rec') as HTMLButtonElement | null;
+    const btnText = document.getElementById('btn-text');
+    const loadingEl = document.getElementById('rec-loading');
+    const errorEl = document.getElementById('rec-error');
+    const gridEl = document.getElementById('rec-books-grid');
+    const timestampEl = document.getElementById('rec-timestamp');
+
+    if (!btn || !loadingEl || !gridEl) return;
+
+    const cacheKey = sectionEl?.dataset.cacheKey || 'taverne_recs';
+
+    function formatTimestamp(timestamp: number): string {
+      const date = new Date(timestamp);
+      return date.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+
+    function displayBooks(books: any[], timestamp?: number) {
+      if (!gridEl) return;
+      gridEl.innerHTML = '';
+      const displayed = books.slice(0, 9);
+
+      for (const book of displayed) {
+        const cardNode = createCardFromBookCard(book);
+        if (cardNode) {
+          gridEl.appendChild(cardNode);
+        }
+      }
+
+      gridEl.classList.remove('hidden');
+
+      if (btnText) {
+        btnText.textContent = 'Régénérer mes recommandations';
+      }
+
+      if (timestampEl && timestamp) {
+        timestampEl.textContent = `• Obtenues le ${formatTimestamp(timestamp)}`;
+        timestampEl.classList.remove('hidden');
+      }
+    }
+
+    // Charger les recommandations depuis le localStorage si elles existent
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        const books = Array.isArray(parsed) ? parsed : parsed.books;
+        const timestamp = parsed.timestamp;
+        if (Array.isArray(books) && books.length > 0) {
+          displayBooks(books, timestamp);
+        }
+      }
+    } catch (e) {
+      console.warn('Erreur lors de la lecture du cache des recommandations :', e);
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      if (btnText) btnText.textContent = 'Génération en cours...';
+
+      if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.add('hidden');
+      }
+
+      loadingEl.classList.remove('hidden');
+      gridEl.classList.add('hidden');
+
+      try {
+        const response = await fetch('/api/recommandations');
+        const data = await response.json().catch(() => ([]));
+
+        if (!response.ok) {
+          throw new Error(data.erreur || data.message || `Erreur serveur (${response.status})`);
+        }
+
+        const books = Array.isArray(data) ? data : [];
+
+        if (books.length === 0) {
+          if (errorEl) {
+            errorEl.textContent = 'Aucune recommandation trouvée pour le moment. Continuez à noter vos lectures pour enrichir vos suggestions !';
+            errorEl.classList.remove('hidden');
+          }
+          if (timestampEl) {
+            timestampEl.classList.add('hidden');
+          }
+          try {
+            localStorage.removeItem(cacheKey);
+          } catch (_) {}
+        } else {
+          // Affichage et mise en cache de 9 livres maximum
+          const displayed = books.slice(0, 9);
+          const now = Date.now();
+
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify({
+              books: displayed,
+              timestamp: now,
+            }));
+          } catch (storageErr) {
+            console.warn('Impossible de sauvegarder dans le localStorage :', storageErr);
+          }
+
+          displayBooks(displayed, now);
+        }
+      } catch (err: any) {
+        if (errorEl) {
+          errorEl.textContent = err.message || 'Une erreur est survenue lors de la récupération des recommandations.';
+          errorEl.classList.remove('hidden');
+        }
+        if (btnText) btnText.textContent = 'Réessayer';
+      } finally {
+        loadingEl.classList.add('hidden');
+        btn.disabled = false;
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initRecommendations);
+  } else {
+    initRecommendations();
+  }
+</script>
+
+<style>
+  .recommendations-section {
+    margin-bottom: 3rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .rec-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0.25rem 0 0 0;
+  }
+
+  .rec-timestamp {
+    display: inline-block;
+    font-size: 0.82rem;
+    color: var(--accent-color, #d97706);
+    font-weight: 500;
+    margin-left: 0.35rem;
+  }
+
+  .btn-generate-rec {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--accent-color, #d97706);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.65rem 1.25rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+    box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2);
+  }
+
+  .btn-generate-rec:hover:not(:disabled) {
+    background-color: var(--accent-hover, #b45309);
+    transform: translateY(-1px);
+  }
+
+  .btn-generate-rec:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .rec-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.5rem;
+    background-color: var(--bg-card);
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  .spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid rgba(217, 119, 6, 0.15);
+    border-top-color: var(--accent-color, #d97706);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin-bottom: 1rem;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .loading-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.35rem 0;
+  }
+
+  .loading-desc {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    max-width: 520px;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .rec-error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    padding: 0.85rem 1.25rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .recommendations-placeholder {
+    margin-bottom: 3rem;
+  }
+
+  .recommendations-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.25rem;
+    background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  }
+
+  .recommendations-icon {
+    font-size: 2rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .recommendations-content h3 {
+    margin: 0 0 0.45rem 0;
+    font-size: 1.15rem;
+    color: #92400e;
+  }
+
+  .recommendations-content p {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.95rem;
+    color: #78350f;
+    line-height: 1.5;
+  }
+
+  .recommendations-content .recommendations-hint {
+    margin: 0;
+    font-size: 0.88rem;
+    color: #b45309;
+    opacity: 0.95;
+  }
+
+  .list-head {
+    margin-bottom: 1.25rem;
+  }
+
+  .list-head h2 {
+    font-size: 1.2rem;
+    margin: 0;
+  }
+
+  .books-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+</style>
+

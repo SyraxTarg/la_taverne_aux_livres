@@ -33,6 +33,10 @@ export interface ApiResponse {
   livres: ApiBook[];
 }
 
+export interface RecommendedBook extends ApiBook {
+  similarity_score?: number;
+}
+
 export interface Comment {
   id: string;
   author: string;
@@ -51,6 +55,7 @@ export interface UserReading {
 export interface UserComment {
   id: number;
   email: string;
+  username?: string;
 }
 
 export interface ApiComment {

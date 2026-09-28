@@ -3,12 +3,14 @@ export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
 import BookCard from '../components/BookCard.astro';
+import Recommandations from '../components/Recommandations.astro';
 import { API_URL } from 'astro:env/server';
 import type { ApiBook } from '../data/books';
 
 const BOOK_DISPLAYED_LIMIT = 9;
+const SHOW_RECOMMENDATIONS = true;
 
-let booksList = [];
+let booksList: ApiBook[] = [];
 
 try {
   const apiUrl = new URL(`${API_URL}/books`);
@@ -17,7 +19,7 @@ try {
   const response = await fetch(apiUrl);
   if (response.ok) {
     const booksListJson = await response.json();
-    booksList = booksListJson.livres
+    booksList = booksListJson.livres;
   } else {
     console.error(`Erreur API : ${response.status}`);
   }
@@ -32,12 +34,14 @@ try {
     <p>Sélection de livres lus, avis personnels et recommandations.</p>
   </section>
 
+  <Recommandations showRecommendations={SHOW_RECOMMENDATIONS} />
+
   <div class="list-head">
     <h2>Sélection de livres du jour</h2>
   </div>
 
   <section class="books-grid">
-    {booksList.map((book : ApiBook) => (
+    {booksList.map((book: ApiBook) => (
       <BookCard {book} />
     ))}
   </section>
