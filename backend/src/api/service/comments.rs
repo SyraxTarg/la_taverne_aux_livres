@@ -87,10 +87,12 @@ impl CommentWithUser {
             Some(u) => UserCommentResponseDto {
                 id: u.id,
                 email: u.email.clone(),
+                username: u.username.clone()
             },
             None => UserCommentResponseDto {
                 id: self.comment.user_id,
                 email: "Utilisateur inconnu".to_string(),
+                username: "utilisateur inconnu".to_string()
             },
         };
 
@@ -117,10 +119,12 @@ impl CommentTree {
             Some(u) => UserCommentResponseDto {
                 id: u.id,
                 email: u.email.clone(),
+                username: u.username.clone()
             },
             None => UserCommentResponseDto {
                 id: self.original.comment.user_id,
                 email: "Utilisateur inconnu".to_string(),
+                username: "Utilisateur inconnu".to_string(),
             },
         };
 

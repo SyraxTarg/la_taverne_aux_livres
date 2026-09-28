@@ -49,3 +49,12 @@ pub async fn get_book_ratings_stats(
 ) -> Result<(Option<f64>, u64), DbErr> {
     repo::get_ratings_stats_by_book_id(db, book_id).await
 }
+
+
+pub async fn can_user_be_recommanded(
+    db: &DatabaseConnection,
+    user_id: i32
+) -> Result<bool, DbErr> {
+    let notes_count = repo::get_user_number_of_notes_over_2(db, user_id).await?;
+    Ok(notes_count > 5)
+}
