@@ -48,10 +48,16 @@ export interface UserReading {
   read_at: string;
 }
 
+export interface UserComment {
+  id: number;
+  email: string;
+}
+
 export interface ApiComment {
   id: number;
   content: string;
-  user_id: number;
+  user?: UserComment;
+  user_id?: number;
   book_id: string;
   parent_id?: number | null;
   created_at: string;
@@ -60,7 +66,8 @@ export interface ApiComment {
 export interface ApiCommentWithReplies {
   id: number;
   content: string;
-  user_id: number;
+  user?: UserComment;
+  user_id?: number;
   book_id: string;
   created_at: string;
   reponses: ApiComment[];

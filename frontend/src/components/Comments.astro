@@ -63,6 +63,20 @@ function formatDate(dateStr: string) {
     return dateStr;
   }
 }
+
+function formatAuthorName(user?: { id?: number; email?: string } | null, fallbackId?: number): string {
+  if (user?.email) {
+    const username = user.email.split('@')[0];
+    return username || user.email;
+  }
+  if (user?.id) {
+    return `Lecteur #${user.id}`;
+  }
+  if (fallbackId) {
+    return `Lecteur #${fallbackId}`;
+  }
+  return "Lecteur anonyme";
+}
 ---
 
 <section
@@ -107,14 +121,17 @@ function formatDate(dateStr: string) {
       </p>
     ) : (
       comments.map((item) => {
-        const isOwner = currentUserId !== null && item.user_id === currentUserId;
+        const itemUserId = item.user?.id ?? item.user_id;
+        const isOwner = (currentUserId !== null && itemUserId === currentUserId) ||
+                        (currentUserEmail !== null && item.user?.email === currentUserEmail);
+        const authorDisplayName = isOwner ? "Vous" : formatAuthorName(item.user, item.user_id);
         return (
           <div class="comment-thread" data-thread-id={item.id}>
-            <article class="comment-card level-1" data-comment-id={item.id} data-user-id={item.user_id}>
+            <article class="comment-card level-1" data-comment-id={item.id} data-user-id={itemUserId ?? ""}>
               <div class="comment-top">
                 <div class="author-badge">
                   <span class="avatar-icon">👤</span>
-                  <strong>{isOwner ? "Vous" : `Lecteur #${item.user_id}`}</strong>
+                  <strong>{authorDisplayName}</strong>
                 </div>
                 <div class="comment-top-right">
                   <time datetime={item.created_at}>{formatDate(item.created_at)}</time>
@@ -181,13 +198,16 @@ function formatDate(dateStr: string) {
 
             <div class="replies-list" data-parent-id={item.id}>
               {item.reponses && item.reponses.length > 0 && item.reponses.map((rep) => {
-                const isRepOwner = currentUserId !== null && rep.user_id === currentUserId;
+                const repUserId = rep.user?.id ?? rep.user_id;
+                const isRepOwner = (currentUserId !== null && repUserId === currentUserId) ||
+                                   (currentUserEmail !== null && rep.user?.email === currentUserEmail);
+                const repAuthorDisplayName = isRepOwner ? "Vous" : formatAuthorName(rep.user, rep.user_id);
                 return (
-                  <article class="comment-card level-2" data-comment-id={rep.id} data-user-id={rep.user_id}>
+                  <article class="comment-card level-2" data-comment-id={rep.id} data-user-id={repUserId ?? ""}>
                     <div class="comment-top">
                       <div class="author-badge">
                         <span class="reply-tag">↳ Réponse</span>
-                        <strong>{isRepOwner ? "Vous" : `Lecteur #${rep.user_id}`}</strong>
+                        <strong>{repAuthorDisplayName}</strong>
                       </div>
                       <div class="comment-top-right">
                         <time datetime={rep.created_at}>{formatDate(rep.created_at)}</time>

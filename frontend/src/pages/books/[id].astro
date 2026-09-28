@@ -2,6 +2,8 @@
 import Layout from '../../layouts/Layout.astro';
 import Comments from '../../components/Comments.astro';
 import Rating from '../../components/Rating.astro';
+import MarkAsRead from '../../components/MarkAsRead.astro';
+import { removeHtmlTags } from '../../utils/html';
 import type { ApiBook, UserReading } from '../../data/books';
 import { API_URL } from 'astro:env/server';
 
@@ -27,6 +29,7 @@ if (!book) return Astro.redirect('/404');
 const token = Astro.cookies.get('auth_token')?.value;
 const isAuthenticated = !!token;
 let userRating: number | undefined = undefined;
+let isRead = false;
 
 if (isAuthenticated && token) {
   try {
@@ -56,8 +59,11 @@ if (isAuthenticated && token) {
       if (readingsRes.ok) {
         const readings: UserReading[] = await readingsRes.json();
         const existingReading = readings.find((r) => r.book_id === id);
-        if (existingReading && typeof existingReading.note === 'number') {
-          userRating = existingReading.note;
+        if (existingReading) {
+          isRead = true;
+          if (typeof existingReading.note === 'number') {
+            userRating = existingReading.note;
+          }
         }
       }
     }
@@ -66,9 +72,32 @@ if (isAuthenticated && token) {
   }
 }
 
+interface BookRatingStats {
+  book_id: string;
+  average_rating: number | null;
+  ratings_count: number;
+}
+
+let bookRatings: BookRatingStats | null = null;
+
+try {
+  const baseApi = API_URL.replace(/\/+$/, '');
+  const ratingsEndpoint = baseApi.endsWith('/api')
+    ? `${baseApi}/books/${id}/ratings`
+    : `${baseApi}/api/books/${id}/ratings`;
+
+  const ratingsRes = await fetch(ratingsEndpoint);
+  if (ratingsRes.ok) {
+    bookRatings = await ratingsRes.json();
+  }
+} catch (err) {
+  console.error('Erreur lors de la récupération des statistiques de notes :', err);
+}
+
 const authorsLabel = book.authors?.length ? book.authors.map(a => a.name).join(', ') : 'Auteur inconnu';
 const year = book.published_date ? book.published_date.slice(0, 4) : 'Date inconnue';
 const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https://') : null;
+const cleanedDescription = removeHtmlTags(book.description);
 ---
 
 <Layout pageTitle={`${book.title} — ${authorsLabel}`}>
@@ -86,6 +115,14 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
               <span class="no-cover-text">Sans illustration</span>
             </div>
           )}
+        </div>
+
+        <div class="mark-as-read-action">
+          <MarkAsRead
+            bookId={book.id}
+            isRead={isRead}
+            isAuthenticated={isAuthenticated}
+          />
         </div>
 
         <div class="meta-box">
@@ -108,9 +145,9 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
 
           <div class="meta-row">
             <span>Note moyenne</span>
-            <strong>
-              {book.average_rating > 0 
-                ? `${book.average_rating} / 5 (${book.ratings_count} avis)`
+            <strong id="average-rating-display">
+              {bookRatings && typeof bookRatings.average_rating === 'number' && bookRatings.ratings_count > 0
+                ? `${bookRatings.average_rating % 1 === 0 ? bookRatings.average_rating : bookRatings.average_rating.toFixed(1)} / 5 (${bookRatings.ratings_count} avis)`
                 : 'Non noté'}
             </strong>
           </div>
@@ -146,8 +183,8 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
 
         <div class="section">
           <h2>Présentation de l'ouvrage</h2>
-          {book.description ? (
-            <p class="description-text">{book.description}</p>
+          {cleanedDescription ? (
+            <p class="description-text">{cleanedDescription}</p>
           ) : (
             <p class="empty-state">
               Aucune description ou résumé n'a encore été renseigné pour ce volume dans la base de données.
@@ -160,6 +197,42 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
     <Comments bookId={book.id} />
   </article>
 </Layout>
+
+<script>
+  function setupRatingStatsListener() {
+    const avgDisplay = document.getElementById("average-rating-display");
+    if (!avgDisplay) return;
+
+    window.addEventListener("reading-updated", async (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const bookId = customEvent.detail?.bookId;
+      if (!bookId) return;
+
+      try {
+        const res = await fetch(`/api/books/${encodeURIComponent(bookId)}/ratings`);
+        if (res.ok) {
+          const stats = await res.json();
+          if (typeof stats.average_rating === 'number' && stats.ratings_count > 0) {
+            const formatted = stats.average_rating % 1 === 0 
+              ? stats.average_rating 
+              : Number(stats.average_rating).toFixed(1);
+            avgDisplay.textContent = `${formatted} / 5 (${stats.ratings_count} avis)`;
+          } else {
+            avgDisplay.textContent = "Non noté";
+          }
+        }
+      } catch (err) {
+        console.error("Erreur actualisation note moyenne :", err);
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupRatingStatsListener);
+  } else {
+    setupRatingStatsListener();
+  }
+</script>
 
 <style>
   .book-card-detail {
@@ -233,6 +306,10 @@ const coverUrl = book.image_url ? book.image_url.replace(/^http:\/\//i, 'https:/
   .no-cover-text {
     font-size: 0.85rem;
     font-weight: 500;
+  }
+
+  .mark-as-read-action {
+    margin-top: 1.25rem;
   }
 
   .meta-box {
