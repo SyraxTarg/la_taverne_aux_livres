@@ -49,6 +49,8 @@ jobs:
 
       - name: Déployer via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          SECRETS_ENV: ${{ secrets.BACKEND_ENV }}
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
@@ -59,5 +61,6 @@ jobs:
             git reset --hard
             git pull origin main
             export APP_VERSION=${{vars.APP_VERSION}}
+            echo "$SECRETS_ENV" > backend/.env
             docker compose --file docker-compose.production.yaml pull
             docker compose --file docker-compose.production.yaml up -d
